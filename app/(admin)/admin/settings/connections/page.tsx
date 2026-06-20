@@ -1,10 +1,8 @@
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { SettingsGroupPage } from '@/components/admin/SettingsGroupPage'
 import { getGroupSettings } from '../_shared'
-import { requireSuperAdmin } from '@/lib/auth'
 
 export default async function ConnectionsSettingsPage() {
-  await requireSuperAdmin()
 
   // Combine all connection-related settings
   const [backupRows, changelogRows, aiRows, analyticsRows, r2Rows, vercelRows, b2Rows, stripeRows, emailRows] = await Promise.all([
