@@ -1,0 +1,702 @@
+// Gazette Platform — Prisma Schema
+// Every admin-configurable variable is stored here and editable from the dashboard.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SETTINGS — one row per key, typed value stored as JSON string
+// This generic table lets any panel store/retrieve settings without migrations.
+// ─────────────────────────────────────────────────────────────────────────────
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique          // e.g. "site.name", "design.bgColor"
+  value     String                    // JSON-encoded value
+  group     String                    // e.g. "site", "design", "email"
+  label     String                    // Plain-English label shown in admin
+  helpText  String?                   // Descriptive helper text for non-technical users
+  inputType String   @default("text") // text | textarea | color | toggle | select | number | image | email | url
+  options   String?                   // JSON array of {label,value} for select inputs
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([group])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE FLAGS — one row per feature module
+// ─────────────────────────────────────────────────────────────────────────────
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique   // e.g. "subscriptions", "ecommerce", "ai_chat"
+  label       String             // Plain-English name
+  description String             // What this feature does — shown in admin
+  enabled     Boolean  @default(false)
+  category    String   @default("general") // general | commerce | engagement | support
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHANGELOG — auto-populated log of every significant platform event
+// ─────────────────────────────────────────────────────────────────────────────
+model ChangelogEntry {
+  id          String   @id @default(cuid())
+  eventType   String   // deploy | feature_toggle | content_save | settings_change | backup | manual
+  title       String   // Short description
+  description String?  // Full details
+  actor       String?  // User email or "system"
+  metadata    String?  // JSON: extra context (e.g. which flag toggled, which setting changed)
+  isPublic    Boolean  @default(false) // Whether to show on public changelog page
+  createdAt   DateTime @default(now())
+
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BACKUPS — record of every backup operation
+// ─────────────────────────────────────────────────────────────────────────────
+model BackupRecord {
+  id           String   @id @default(cuid())
+  trigger      String   // deploy | content_save | settings_change | manual | scheduled
+  status       String   @default("pending") // pending | running | completed | failed
+  storageKey   String?  // B2 object key for the backup archive
+  sizeBytes    BigInt?  // Size of the backup
+  downloadUrl  String?  // Temporary signed URL (generated on demand)
+  errorMessage String?  // If status = failed
+  retentionTag String?  // daily | weekly | monthly
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SETUP WIZARD — tracks completion state of each step
+// ─────────────────────────────────────────────────────────────────────────────
+model SetupStep {
+  id          String   @id @default(cuid())
+  stepKey     String   @unique  // site_identity | template | stripe | email | anthropic | features
+  label       String
+  completed   Boolean  @default(false)
+  skipped     Boolean  @default(false)
+  completedAt DateTime?
+  order       Int
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NAV ITEMS — external links shown as tabs alongside CMS pages
+// ─────────────────────────────────────────────────────────────────────────────
+model NavItem {
+  id          String   @id @default(cuid())
+  label       String             // Tab label e.g. "Shop", "Help Desk"
+  numeral     String             // Short identifier shown on the tab e.g. "★", "V"
+  href        String             // URL path e.g. "/shop" or full URL
+  navOrder    Int                // Global order — interleaved with CmsPage.pageOrder
+  visible     Boolean  @default(true)
+  openInNewTab Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CMS PAGES — newspaper pages managed from admin
+// ─────────────────────────────────────────────────────────────────────────────
+model CmsPage {
+  id             String       @id @default(cuid())
+  slug           String       @unique
+  tabLabel       String       // Label shown in the side tab
+  tabNumeral     String       // Roman numeral e.g. "I", "II"
+  pageOrder      Int
+  layout         String       @default("columns-3") // columns-1 | columns-2 | columns-3 | columns-2-1 | columns-1-2
+  columnRatios   String?      // JSON e.g. {"left":"2fr","right":"1fr"}
+  sectionLabel   String?      // Section heading shown top-left
+  footerLeft     String?
+  footerCenter   String?
+  footerRight    String?
+  published      Boolean      @default(false)
+  publishAt      DateTime?    // Schedule publish for a future date/time
+  editionDate    String?      // Display string e.g. "Thursday, 14th November, 1878"
+  volume         String?      // e.g. "XVI"
+  issueNumber    String?      // e.g. "841"
+  mastheadBar    String?      // Edition bar content JSON
+  taglineRow     String?      // Tagline row content JSON
+  // SEO
+  seoTitle       String?      // Overrides tab label in <title>
+  seoDescription String?      // Meta description
+  seoImage       String?      // Open Graph image URL
+  // Page-level custom code injection
+  customCss      String?      @db.Text
+  customJs       String?      @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  blocks         ContentBlock[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTENT BLOCKS — individual blocks within a CMS page
+// ─────────────────────────────────────────────────────────────────────────────
+model ContentBlock {
+  id         String   @id @default(cuid())
+  pageId     String
+  page       CmsPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  blockType  String   // headline | body | pullquote | advertisement | woodcut | ornate_box | rule | section_label
+  content    String?  // JSON content
+  blockOrder Int
+  visible    Boolean  @default(true)
+  column     Int?     // Which column (1, 2, 3) for multi-column layouts
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([pageId, blockOrder])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MEDIA — uploaded files tracked in DB, stored in R2
+// ─────────────────────────────────────────────────────────────────────────────
+model MediaFile {
+  id          String   @id @default(cuid())
+  filename    String
+  mimeType    String
+  sizeBytes   Int
+  storageKey  String   // R2 object key
+  publicUrl   String
+  altText     String?
+  uploadedBy  String?  // user email
+  createdAt   DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUBSCRIPTION PLANS — fully configurable from admin, no hardcoded tiers
+// ─────────────────────────────────────────────────────────────────────────────
+model SubscriptionPlan {
+  id                  String   @id @default(cuid())
+  name                String   // e.g. "The Correspondent", "The Editor", "The Proprietor"
+  slug                String   @unique // e.g. "correspondent" — used in code references
+  description         String?  @db.Text
+  priceMonthly        Int?     // cents — null = free
+  priceYearly         Int?     // cents — null = not offered yearly
+  stripePriceIdMonthly String?
+  stripePriceIdYearly  String?
+  trialDays           Int      @default(0)
+  features            String?  // JSON array of plain-English feature strings shown on pricing page
+  highlightFeature    String?  // Single "hero" feature shown prominently
+  isHighlighted       Boolean  @default(false) // Show as "Most Popular" etc.
+  highlightLabel      String?  // e.g. "Most Popular", "Best Value"
+  visible             Boolean  @default(true)
+  displayOrder        Int      @default(0)
+  maxPauseDays        Int      @default(0)  // 0 = unlimited
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  subscribers         UserSubscription[]
+  corporateGifts      CorporateGift[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAUSE REMINDERS — configurable schedule + copy
+// ─────────────────────────────────────────────────────────────────────────────
+model PauseReminder {
+  id         String   @id @default(cuid())
+  daysBeforeResume Int     // e.g. 14, 7, 3, 0
+  subject    String
+  bodyText   String   @db.Text  // Victorian-voiced, editable in admin
+  active     Boolean  @default(true)
+  order      Int
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CANCEL REASONS — shown to user during cancel flow
+// ─────────────────────────────────────────────────────────────────────────────
+model CancelReason {
+  id      String @id @default(cuid())
+  label   String
+  order   Int
+  active  Boolean @default(true)
+  allowFreeText Boolean @default(false)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCTS — eCommerce catalogue
+// ─────────────────────────────────────────────────────────────────────────────
+model Product {
+  id             String         @id @default(cuid())
+  slug           String         @unique
+  name           String
+  category       String         @default("")
+  description    String?        @db.Text
+  priceInCents   Int
+  compareAtCents Int?
+  images         String?        // JSON array of MediaFile IDs
+  stripeProductId String?
+  inventory      Int?
+  lowStockAlert  Int?           // alert when inventory falls to this number
+  visible        Boolean        @default(true)
+  displayOrder   Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  variants       ProductVariant[]
+}
+
+model ProductVariant {
+  id           String   @id @default(cuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name         String
+  priceInCents Int?
+  inventory    Int?
+  stripePriceId String?
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────────────────────────────────────
+model Order {
+  id              String   @id @default(cuid())
+  customerEmail   String
+  customerName    String?
+  lineItems       String   // JSON
+  totalCents      Int
+  currency        String   @default("GBP")
+  status          String   @default("pending") // pending | paid | fulfilled | cancelled | refunded
+  stripePaymentId String?
+  shippingAddress String?  // JSON
+  trackingNumber  String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([customerEmail])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERMISSIONS — granular action-level access control
+// ─────────────────────────────────────────────────────────────────────────────
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique  // e.g. "content.publish", "orders.refund"
+  label       String            // Plain-English label shown in admin
+  description String            // What this permission allows
+  category    String            // content | users | subscriptions | store | support | settings | deploy | analytics | help
+
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+}
+
+// Role-level permission grants — one row per role+permission combination
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         String     // master_admin | admin | manager | employee
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  granted      Boolean    @default(true)
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([role, permissionId])
+  @@index([role])
+}
+
+// Per-user permission overrides — grant or deny a specific permission for one user
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  granted      Boolean    // true = explicitly granted even if role lacks it; false = explicitly denied even if role has it
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, permissionId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USERS — platform users with tiered roles
+// ─────────────────────────────────────────────────────────────────────────────
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  passwordHash     String?
+  // System access role — defines what they can do in the backend
+  // master_admin: full IT + admin access
+  // admin: content/settings/users/subscriptions — no IT panels
+  // subscriber: site member with an active subscription plan
+  // customer: one-off purchaser, no subscription
+  role             String    @default("subscriber")
+  emailVerified    DateTime?
+  image            String?
+  stripeCustomerId String?
+  notifyByEmail    Boolean   @default(true)
+  notifyBySms      Boolean   @default(false)
+  phoneNumber      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  subscription     UserSubscription?
+  permissions      UserPermission[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER SUBSCRIPTIONS — links a user to their current subscription plan
+// ─────────────────────────────────────────────────────────────────────────────
+model UserSubscription {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId              String
+  plan                SubscriptionPlan @relation(fields: [planId], references: [id])
+  status              String    @default("active") // active | paused | cancelled | past_due | trialing
+  billingInterval     String    @default("monthly") // monthly | yearly
+  stripeSubscriptionId String?
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  pausedAt            DateTime?
+  pauseResumesAt      DateTime?
+  cancelledAt         DateTime?
+  cancelReason        String?
+  trialEndsAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([status])
+  @@index([planId])
+}
+
+// NextAuth required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KNOWLEDGE BASE — Help centre articles
+// ─────────────────────────────────────────────────────────────────────────────
+model KbCategory {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  order       Int         @default(0)
+  articles    KbArticle[]
+}
+
+model KbArticle {
+  id          String     @id @default(cuid())
+  categoryId  String
+  category    KbCategory @relation(fields: [categoryId], references: [id])
+  title       String
+  slug        String     @unique
+  body        String     @db.Text
+  published   Boolean    @default(false)
+  helpful     Int        @default(0)
+  notHelpful  Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUPPORT TICKETS
+// ─────────────────────────────────────────────────────────────────────────────
+model SupportTicket {
+  id            String    @id @default(cuid())
+  subject       String
+  body          String    @db.Text
+  customerEmail String
+  customerName  String?
+  status        String    @default("open") // open | in_progress | waiting | resolved | closed
+  priority      String    @default("normal") // low | normal | high | urgent
+  assignedTo    String?   // admin user email
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  messages      TicketMessage[]
+}
+
+model TicketMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  body      String        @db.Text
+  author    String        // email
+  isAdmin   Boolean       @default(false)
+  createdAt DateTime      @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE REQUESTS — public roadmap
+// ─────────────────────────────────────────────────────────────────────────────
+model FeatureRequest {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  submittedBy String?  // email
+  status      String   @default("under_review") // under_review | planned | in_progress | shipped | declined
+  upvotes     Int      @default(0)
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI CHAT LOGS
+// ─────────────────────────────────────────────────────────────────────────────
+model ChatSession {
+  id           String        @id @default(cuid())
+  userEmail    String?
+  pageContext  String?       // which page/section the chat was on
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  messages     ChatMessage[]
+}
+
+model ChatMessage {
+  id            String      @id @default(cuid())
+  sessionId     String
+  session       ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role          String      // user | assistant
+  content       String      @db.Text
+  escalated     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECOMMENDATION QUIZ
+// ─────────────────────────────────────────────────────────────────────────────
+model QuizQuestion {
+  id       String       @id @default(cuid())
+  text     String
+  order    Int
+  active   Boolean      @default(true)
+  answers  QuizAnswer[]
+}
+
+model QuizAnswer {
+  id         String       @id @default(cuid())
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  order      Int
+  // Matching rules stored as JSON: {"recommendPlan":"pro","recommendProduct":"id123"}
+  matchRules String?
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHIPPING ZONES & RATES
+// ─────────────────────────────────────────────────────────────────────────────
+model ShippingZone {
+  id        String        @id @default(cuid())
+  name      String        // e.g. "United Kingdom", "Europe", "Rest of World"
+  countries String        // JSON array of country codes
+  active    Boolean       @default(true)
+  rates     ShippingRate[]
+}
+
+model ShippingRate {
+  id           String       @id @default(cuid())
+  zoneId       String
+  zone         ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  name         String       // e.g. "Standard (3–5 days)"
+  priceInCents Int
+  minDays      Int?
+  maxDays      Int?
+  active       Boolean      @default(true)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEWSLETTER SUBSCRIBERS
+// ─────────────────────────────────────────────────────────────────────────────
+model NewsletterSubscriber {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  source           String    @default("website") // website | checkout | account | import
+  confirmed        Boolean   @default(false)
+  confirmToken     String?
+  unsubscribedAt   DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WAITLIST ENTRIES
+// ─────────────────────────────────────────────────────────────────────────────
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  message   String?
+  position  Int?
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEO METADATA — per-content SEO settings (articles, products, plans)
+// CmsPage has its own seoTitle/seoDescription/seoImage columns already
+// ─────────────────────────────────────────────────────────────────────────────
+model SeoMeta {
+  id             String   @id @default(cuid())
+  contentType    String   // 'article' | 'product' | 'plan'
+  contentId      String
+  focusKeyword   String?  // Primary keyword — gets highest weight in search
+  altKeywords    String?  // Comma-separated secondary keywords
+  seoTitle       String?  // Overrides content title in search results and <title>
+  seoDescription String?  @db.Text // Meta description (shown in Google + site search)
+  canonicalUrl   String?  // Canonical URL for duplicate content
+  ogImage        String?  // Open Graph image URL
+  noIndex        Boolean  @default(false) // Exclude from search engines and site search
+  searchBoost    Float    @default(1.0)   // Relevance multiplier: 0.5 = de-prioritise, 3.0 = high priority
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([contentType, contentId])
+  @@index([contentType, contentId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEARCH INDEX — denormalised FTS index across all content types
+// Rebuilt on content save; queried via PostgreSQL full-text search
+// ─────────────────────────────────────────────────────────────────────────────
+model SearchIndex {
+  id          String   @id @default(cuid())
+  contentType String   // 'article' | 'product' | 'plan' | 'page'
+  contentId   String
+  title       String   // Weighted A — highest rank
+  focusKw     String?  // Weighted A — exact focus keyword match
+  tags        String?  // Weighted B — category names, tags
+  excerpt     String?  // Weighted C — description / meta description
+  body        String   @db.Text // Weighted D — full content
+  url         String
+  imageUrl    String?
+  boost       Float    @default(1.0)
+  published   Boolean  @default(true)
+  indexedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([contentType, contentId])
+  @@index([contentType])
+  @@index([published])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// READING ROOM — members-only long-form content
+// ─────────────────────────────────────────────────────────────────────────────
+model ReadingRoomPost {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  excerpt     String?   @db.Text
+  content     String    @db.Text
+  coverImage  String?
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([published, publishedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CORPORATE GIFTING — businesses managing gift subscriptions
+// ─────────────────────────────────────────────────────────────────────────────
+model CorporateAccount {
+  id           String         @id @default(cuid())
+  companyName  String
+  contactEmail String         @unique
+  contactName  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  gifts        CorporateGift[]
+}
+
+model CorporateGift {
+  id                 String           @id @default(cuid())
+  corporateAccountId String
+  account            CorporateAccount @relation(fields: [corporateAccountId], references: [id], onDelete: Cascade)
+  recipientEmail     String
+  recipientName      String?
+  planId             String
+  plan               SubscriptionPlan @relation(fields: [planId], references: [id])
+  status             String           @default("pending") // pending | active | cancelled
+  activatedAt        DateTime?
+  expiresAt          DateTime?
+  note               String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([corporateAccountId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOG — public editorial posts
+// ─────────────────────────────────────────────────────────────────────────────
+model BlogPost {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  excerpt     String?   @db.Text
+  content     String    @db.Text
+  coverImage  String?
+  author      String    @default("")
+  tags        String    @default("") // comma-separated
+  category    String    @default("")
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  featured    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([published, publishedAt])
+  @@index([category])
+}

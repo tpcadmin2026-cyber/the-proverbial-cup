@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"HANDOFF REMINDER: Update handoffs/NEW_CHAT_HANDOFF.md before starting a new chat — reflect what was built today and update the next steps list.\"}'",
+            "statusMessage": "Handoff reminder..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command'); echo \"$cmd\" | grep -q 'pnpm build' && rm -rf \"/Users/tk_mbpro2020/Desktop/Dayna/Website/The Proverbial Cup/Project/.next\" || true",
+            "statusMessage": "Clearing .next cache..."
+          }
+        ]
+      }
+    ]
+  }
+}
