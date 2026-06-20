@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/auth'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ ticketId: string }> }) {
   try {
+    await requireAdmin()
     const { ticketId } = await params
     const { action, body, author } = await req.json()
 
@@ -27,6 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ticketId: string }> }) {
   try {
+    await requireAdmin()
     const { ticketId } = await params
     const { status, priority, assignedTo } = await req.json()
 

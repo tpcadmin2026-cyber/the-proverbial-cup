@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { indexArticle } from '@/lib/search'
+import { requireAdmin } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
+    await requireAdmin()
     const { title, body, categoryId, published } = await req.json()
     if (!title || !body || !categoryId) {
       return NextResponse.json({ error: 'Title, body, and category are required.' }, { status: 400 })

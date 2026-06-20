@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pageId: string }> }) {
   try {
+    await requireAdmin()
     const { pageId } = await params
     const {
       tabLabel, tabNumeral, pageOrder, layout, sectionLabel, published,
@@ -48,6 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ pageId: string }> }) {
   try {
+    await requireAdmin()
     const { pageId } = await params
     await db.cmsPage.delete({ where: { id: pageId } })
     return NextResponse.json({ success: true })

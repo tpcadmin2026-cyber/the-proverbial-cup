@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { indexArticle, removeFromIndex } from '@/lib/search'
+import { requireAdmin } from '@/lib/auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ articleId: string }> }) {
   try {
+    await requireAdmin()
     const { articleId } = await params
     const { title, body, categoryId, published } = await req.json()
 
@@ -28,6 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ar
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ articleId: string }> }) {
   try {
+    await requireAdmin()
     const { articleId } = await params
     await db.kbArticle.delete({ where: { id: articleId } })
     await removeFromIndex('article', articleId).catch(console.error)

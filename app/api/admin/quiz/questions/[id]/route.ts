@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin()
   const { id } = await params
   const data = await req.json()
   const question = await db.quizQuestion.update({ where: { id }, data })
@@ -9,6 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin()
   const { id } = await params
   await db.quizQuestion.delete({ where: { id } })
   return NextResponse.json({ success: true })
@@ -16,6 +19,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
 // POST to add an answer to this question
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin()
   const { id: questionId } = await params
   const { text, matchRules } = await req.json()
   const count = await db.quizAnswer.count({ where: { questionId } })

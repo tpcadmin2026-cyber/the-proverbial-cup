@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
+    await requireAdmin()
     const { tabLabel, tabNumeral, pageOrder, layout, sectionLabel, published, blocks } = await req.json()
 
     if (!tabLabel || !tabNumeral) {

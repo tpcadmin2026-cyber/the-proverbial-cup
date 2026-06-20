@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/auth'
 
 export async function GET() {
+  await requireAdmin()
   const posts = await db.readingRoomPost.findMany({ orderBy: { createdAt: 'desc' } })
   return NextResponse.json(posts)
 }
 
 export async function POST(req: NextRequest) {
   try {
+    await requireAdmin()
     const { title, slug, excerpt, content, coverImage, published } = await req.json()
     if (!title?.trim() || !slug?.trim() || !content?.trim()) {
       return NextResponse.json({ error: 'Title, slug, and content are required.' }, { status: 400 })

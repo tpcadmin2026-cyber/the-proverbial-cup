@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { renderAsync } from '@react-email/components'
 import { getSetting } from '@/lib/settings'
 import * as React from 'react'
+import { requireAdmin } from '@/lib/auth'
 
 const SITE = 'My Site'
 const BASE = 'http://localhost:3000'
 
 export async function GET(_req: NextRequest, { params }: { params: { template: string } }) {
+  await requireAdmin()
   const siteName = await getSetting<string>('site.name', SITE)
   const footerText = await getSetting<string>('email.footer', `© ${siteName}`)
 

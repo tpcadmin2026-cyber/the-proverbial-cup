@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/auth'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ orderId: string }> }) {
   try {
+    await requireAdmin()
     const { orderId } = await params
     const { status, trackingNumber, notes } = await req.json()
 
