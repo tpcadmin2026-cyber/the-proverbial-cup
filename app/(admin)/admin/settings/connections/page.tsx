@@ -9,13 +9,12 @@ export default async function ConnectionsSettingsPage() {
   // Extra guard — Master Admin only
   const cookieStore = await cookies()
   const token = cookieStore.get('authjs.session-token')?.value
-  if (token) {
-    const session = await db.session.findUnique({ where: { sessionToken: token }, include: { user: true } })
-    if (session?.user.role !== 'master_admin') redirect('/admin/settings/site')
-  }
+  if (!token) redirect('/login')
+  const session = await db.session.findUnique({ where: { sessionToken: token }, include: { user: true } })
+  if (!session || session.user.role !== 'master_admin') redirect('/admin/settings/site')
 
   // Combine all connection-related settings
-  const [backupRows, changelogRows, aiRows, analyticsRows, r2Rows, vercelRows, b2Rows, stripeRows] = await Promise.all([
+  const [backupRows, changelogRows, aiRows, analyticsRows, r2Rows, vercelRows, b2Rows, stripeRows, emailRows] = await Promise.all([
     getGroupSettings('backups'),
     getGroupSettings('changelog'),
     getGroupSettings('ai'),
@@ -24,6 +23,7 @@ export default async function ConnectionsSettingsPage() {
     getGroupSettings('vercel'),
     getGroupSettings('b2'),
     getGroupSettings('stripe'),
+    getGroupSettings('email'),
   ])
 
   return (
@@ -38,6 +38,10 @@ export default async function ConnectionsSettingsPage() {
         </div>
       </div>
       <div className="space-y-0">
+        <div className="px-8 pt-4">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Email — Resend</h2>
+        </div>
+        <SettingsGroupPage rows={emailRows.filter(r => r.key === 'email.apiKey' || r.key === 'email.fromAddress' || r.key === 'email.fromName' || r.key === 'email.replyTo')} />
         <div className="px-8 pt-4">
           <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">AI assistant — Anthropic</h2>
         </div>
