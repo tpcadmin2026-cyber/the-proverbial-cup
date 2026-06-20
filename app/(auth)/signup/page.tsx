@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Suspense } from 'react'
 import { AuthCard } from '@/components/auth/AuthCard'
 import { SignupForm } from './SignupForm'
