@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { SettingsGroupPage } from '@/components/admin/SettingsGroupPage'
 import { getGroupSettings } from '../_shared'
