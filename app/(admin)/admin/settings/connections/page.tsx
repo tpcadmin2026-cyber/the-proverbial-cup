@@ -1,19 +1,10 @@
-export const dynamic = 'force-dynamic'
-
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { SettingsGroupPage } from '@/components/admin/SettingsGroupPage'
 import { getGroupSettings } from '../_shared'
-import { cookies } from 'next/headers'
-import { db } from '@/lib/db'
-import { redirect } from 'next/navigation'
+import { requireSuperAdmin } from '@/lib/auth'
 
 export default async function ConnectionsSettingsPage() {
-  // Extra guard — Master Admin only
-  const cookieStore = await cookies()
-  const token = cookieStore.get('authjs.session-token')?.value
-  if (!token) redirect('/login')
-  const session = await db.session.findUnique({ where: { sessionToken: token }, include: { user: true } })
-  if (!session || session.user.role !== 'master_admin') redirect('/admin/settings/site')
+  await requireSuperAdmin()
 
   // Combine all connection-related settings
   const [backupRows, changelogRows, aiRows, analyticsRows, r2Rows, vercelRows, b2Rows, stripeRows, emailRows] = await Promise.all([
