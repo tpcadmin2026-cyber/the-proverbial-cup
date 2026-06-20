@@ -12,9 +12,9 @@ export default async function BlogListPage() {
     select: { id: true, slug: true, title: true, category: true, published: true, featured: true, publishedAt: true, createdAt: true },
   })
 
-  type PostRow = typeof posts[number]
-  const published = posts.filter((p: PostRow) => p.published)
-  const drafts = posts.filter((p: PostRow) => !p.published)
+  type Post = typeof posts[number]
+  const published = posts.filter((p: Post) => p.published)
+  const drafts = posts.filter((p: Post) => !p.published)
 
   return (
     <>
