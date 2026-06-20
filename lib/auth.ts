@@ -58,7 +58,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 const ADMIN_ROLES = new Set(['admin', 'master_admin', 'manager', 'employee'])
 
 async function getCurrentUser() {
-  const token = cookies().get('authjs.session-token')?.value
+  const token = (await cookies()).get('authjs.session-token')?.value
   if (!token) return null
   return getSessionUser(token)
 }
