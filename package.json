@@ -1,6 +1,6 @@
 {
   "name": "gazette-platform",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "scripts": {
     "dev": "rm -rf .next && next dev",
@@ -28,7 +28,7 @@
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
-    "next": "14.2.4",
+    "next": "14.2.35",
     "next-auth": "^5.0.0-beta.19",
     "posthog-js": "^1.380.1",
     "posthog-node": "^4.0.1",
