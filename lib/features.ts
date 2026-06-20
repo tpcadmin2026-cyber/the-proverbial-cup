@@ -18,6 +18,7 @@ export type FeatureFlagKey =
   | 'analytics'
   | 'corporate_gifting'
   | 'reading_room'
+  | 'blog'
 
 // Check if a single feature is enabled.
 export async function isEnabled(key: FeatureFlagKey): Promise<boolean> {
