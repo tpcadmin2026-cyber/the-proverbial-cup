@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     if (!updates || typeof updates !== 'object') {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
-    await saveSettings(updates, session.user?.email ?? 'admin')
+    await saveSettings(updates, session.email ?? 'admin')
     return NextResponse.json({ ok: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error'

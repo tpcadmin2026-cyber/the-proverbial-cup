@@ -7,7 +7,7 @@ import { logChange } from '@/lib/changelog'
 export async function POST() {
   try {
     const session = await requireAdmin()
-    const actor = session.user?.email ?? 'admin'
+    const actor = session.email ?? 'admin'
 
     const { indexed } = await rebuildSearchIndex()
 

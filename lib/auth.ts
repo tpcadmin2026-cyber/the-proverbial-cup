@@ -3,8 +3,10 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import Google from 'next-auth/providers/google'
 import Resend from 'next-auth/providers/resend'
 import Credentials from 'next-auth/providers/credentials'
+import { cookies } from 'next/headers'
 import { db } from './db'
 import { compare } from 'bcryptjs'
+import { getSessionUser } from './auth-utils'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
@@ -52,21 +54,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 })
 
-// Require admin role — use in Server Components and Route Handlers.
+// Require admin role — reads the custom session cookie set by /api/auth/login.
 const ADMIN_ROLES = new Set(['admin', 'master_admin', 'manager', 'employee'])
 
+async function getCurrentUser() {
+  const token = cookies().get('authjs.session-token')?.value
+  if (!token) return null
+  return getSessionUser(token)
+}
+
 export async function requireAdmin() {
-  const session = await auth()
-  if (!session?.user || !ADMIN_ROLES.has(session.user.role as string)) {
+  const user = await getCurrentUser()
+  if (!user || !ADMIN_ROLES.has(user.role)) {
     throw new Error('Unauthorised')
   }
-  return session
+  return user
 }
 
 export async function requireSuperAdmin() {
-  const session = await auth()
-  if (!session?.user || !['admin', 'master_admin'].includes(session.user.role as string)) {
+  const user = await getCurrentUser()
+  if (!user || !['admin', 'master_admin'].includes(user.role)) {
     throw new Error('Unauthorised')
   }
-  return session
+  return user
 }

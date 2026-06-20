@@ -17,7 +17,7 @@ export async function GET() {
 export async function POST() {
   try {
     const session = await requireAdmin()
-    await triggerBackup('manual', session.user?.email ?? 'admin')
+    await triggerBackup('manual', session.email ?? 'admin')
     return NextResponse.json({ ok: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error'

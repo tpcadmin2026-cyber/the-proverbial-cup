@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       eventType: 'manual',
       title,
       description,
-      actor: session.user?.email ?? 'admin',
+      actor: session.email ?? 'admin',
       isPublic: false,
     })
     return NextResponse.json({ ok: true })

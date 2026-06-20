@@ -9,7 +9,7 @@ import { getSetting } from '@/lib/settings'
 export async function POST() {
   try {
     const session = await requireAdmin()
-    const actor = session.user?.email ?? 'admin'
+    const actor = session.email ?? 'admin'
 
     // Optional pre-deploy backup
     const backupOnDeploy = await getSetting<boolean>('backups.onDeploy', true)

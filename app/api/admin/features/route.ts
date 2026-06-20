@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     if (!key || typeof enabled !== 'boolean') {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
-    await toggleFlag(key, enabled, session.user?.email ?? 'admin')
+    await toggleFlag(key, enabled, session.email ?? 'admin')
     return NextResponse.json({ ok: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error'
