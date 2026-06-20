@@ -6,15 +6,25 @@ import { format } from 'date-fns'
 
 export const metadata: Metadata = { title: 'Blog' }
 
+type Post = {
+  id: string
+  slug: string
+  title: string
+  category: string
+  published: boolean
+  featured: boolean
+  publishedAt: Date | null
+  createdAt: Date
+}
+
 export default async function BlogListPage() {
-  const posts = await db.blogPost.findMany({
+  const posts: Post[] = await db.blogPost.findMany({
     orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
     select: { id: true, slug: true, title: true, category: true, published: true, featured: true, publishedAt: true, createdAt: true },
   })
 
-  type Post = typeof posts[number]
-  const published = posts.filter((p: Post) => p.published)
-  const drafts = posts.filter((p: Post) => !p.published)
+  const published = posts.filter((p) => p.published)
+  const drafts = posts.filter((p) => !p.published)
 
   return (
     <>
@@ -62,9 +72,7 @@ export default async function BlogListPage() {
   )
 }
 
-function PostRow({ post }: {
-  post: { id: string; slug: string; title: string; category: string; published: boolean; featured: boolean; publishedAt: Date | null; createdAt: Date }
-}) {
+function PostRow({ post }: { post: Post }) {
   return (
     <li>
       <Link
