@@ -101,8 +101,6 @@ export function AdminNav({ role, siteName = 'My Site' }: { role?: string; siteNa
   const pathname = usePathname()
   const isMaster = role === 'master_admin'
   const isAdmin  = role === 'master_admin' || role === 'admin'
-  // DEBUG — remove after confirming
-  console.log('[AdminNav] role prop:', role, '| isMaster:', isMaster)
 
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -238,7 +236,7 @@ export function AdminNav({ role, siteName = 'My Site' }: { role?: string; siteNa
                 {!collapsed && (
                   <div className={clsx(
                     'overflow-hidden transition-all duration-200 ease-in-out',
-                    isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    isOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
                   )}>
                     <ul className="ml-7 mt-0.5 mb-1 space-y-0.5">
                       {visibleChildren.map((child) => {
