@@ -1,80 +1,68 @@
-// Cloudflare R2 media storage — S3-compatible.
-// Credentials read from env vars first, then DB settings.
+// Supabase Storage — replaces Cloudflare R2.
+// Credentials come from environment variables set in Railway.
 
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
-import { getSetting } from './settings'
+import { createClient } from '@supabase/supabase-js'
 
-async function getR2Config() {
-  const accountId    = process.env.R2_ACCOUNT_ID     || await getSetting<string>('r2.accountId',     '')
-  const accessKeyId  = process.env.R2_ACCESS_KEY_ID  || await getSetting<string>('r2.accessKeyId',   '')
-  const secretKey    = process.env.R2_SECRET_KEY      || await getSetting<string>('r2.secretKey',     '')
-  const bucket       = process.env.R2_BUCKET          || await getSetting<string>('r2.bucket',        '')
-  const publicUrl    = process.env.R2_PUBLIC_URL       || await getSetting<string>('r2.publicUrl',    '')
-  return { accountId, accessKeyId, secretKey, bucket, publicUrl }
+function getConfig() {
+  return {
+    url:        process.env.SUPABASE_URL            ?? '',
+    serviceKey: process.env.SUPABASE_SERVICE_KEY    ?? '',
+    bucket:     process.env.SUPABASE_BUCKET         ?? 'media',
+  }
 }
 
-export function r2Configured(cfg: { accountId: string; accessKeyId: string; secretKey: string; bucket: string }): boolean {
-  return !!(cfg.accountId && cfg.accessKeyId && cfg.secretKey && cfg.bucket)
+function configured(cfg: { url: string; serviceKey: string }) {
+  return !!(cfg.url && cfg.serviceKey)
 }
 
-function makeClient(cfg: { accountId: string; accessKeyId: string; secretKey: string }) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${cfg.accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId: cfg.accessKeyId, secretAccessKey: cfg.secretKey },
+function makeClient(cfg: { url: string; serviceKey: string }) {
+  return createClient(cfg.url, cfg.serviceKey, {
+    auth: { persistSession: false },
   })
 }
 
-// Generate a presigned upload URL (browser uploads directly to R2 — no server memory used).
-export async function getUploadUrl(key: string, contentType: string): Promise<{ uploadUrl: string; publicUrl: string } | null> {
-  const cfg = await getR2Config()
-  if (!r2Configured(cfg)) return null
+// Generate a presigned upload URL — browser uploads directly to Supabase Storage.
+export async function getUploadUrl(key: string, _contentType: string): Promise<{ uploadUrl: string; publicUrl: string } | null> {
+  const cfg = getConfig()
+  if (!configured(cfg)) return null
 
-  const client = makeClient(cfg)
-  const command = new PutObjectCommand({
-    Bucket: cfg.bucket,
-    Key: key,
-    ContentType: contentType,
-  })
+  const supabase = makeClient(cfg)
+  const { data, error } = await supabase.storage.from(cfg.bucket).createSignedUploadUrl(key)
+  if (error || !data) return null
 
-  const uploadUrl = await getSignedUrl(client, command, { expiresIn: 300 }) // 5 min
-  const publicUrl = cfg.publicUrl
-    ? `${cfg.publicUrl.replace(/\/$/, '')}/${key}`
-    : `https://pub-${cfg.accountId}.r2.dev/${key}` // fallback to R2 dev URL
-
-  return { uploadUrl, publicUrl }
+  const publicUrl = `${cfg.url}/storage/v1/object/public/${cfg.bucket}/${key}`
+  return { uploadUrl: data.signedUrl, publicUrl }
 }
 
 // List media files in the bucket.
 export async function listMedia(prefix = 'media/', maxKeys = 200) {
-  const cfg = await getR2Config()
-  if (!r2Configured(cfg)) return []
+  const cfg = getConfig()
+  if (!configured(cfg)) return []
 
-  const client = makeClient(cfg)
-  const response = await client.send(new ListObjectsV2Command({
-    Bucket: cfg.bucket,
-    Prefix: prefix,
-    MaxKeys: maxKeys,
-  }))
+  const supabase = makeClient(cfg)
+  const { data, error } = await supabase.storage.from(cfg.bucket).list(prefix, { limit: maxKeys })
+  if (error || !data) return []
 
-  const publicBase = cfg.publicUrl?.replace(/\/$/, '') || `https://pub-${cfg.accountId}.r2.dev`
-
-  return (response.Contents ?? []).map(obj => ({
-    key:       obj.Key ?? '',
-    url:       `${publicBase}/${obj.Key}`,
-    size:      obj.Size ?? 0,
-    updatedAt: obj.LastModified ?? new Date(),
-  }))
+  const publicBase = `${cfg.url}/storage/v1/object/public/${cfg.bucket}`
+  return data
+    .filter(obj => obj.name)
+    .map(obj => ({
+      key:       `${prefix}${obj.name}`,
+      url:       `${publicBase}/${prefix}${obj.name}`,
+      size:      obj.metadata?.size ?? 0,
+      updatedAt: obj.updated_at ? new Date(obj.updated_at) : new Date(),
+    }))
 }
 
 // Delete a file from the bucket.
 export async function deleteMedia(key: string): Promise<void> {
-  const cfg = await getR2Config()
-  if (!r2Configured(cfg)) return
-  const client = makeClient(cfg)
-  await client.send(new DeleteObjectCommand({ Bucket: cfg.bucket, Key: key }))
+  const cfg = getConfig()
+  if (!configured(cfg)) return
+  const supabase = makeClient(cfg)
+  await supabase.storage.from(cfg.bucket).remove([key])
 }
 
-export { getR2Config }
+// Legacy export — kept so any existing imports don't break.
+export async function getR2Config() {
+  return getConfig()
+}

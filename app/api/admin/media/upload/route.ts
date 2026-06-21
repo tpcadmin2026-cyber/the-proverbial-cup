@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     const result = await getUploadUrl(key, contentType)
     if (!result) {
-      return NextResponse.json({ error: 'R2 is not configured. Add credentials in Settings → Connections.' }, { status: 503 })
+      return NextResponse.json({ error: 'Storage is not configured. Add Supabase credentials to Railway environment variables.' }, { status: 503 })
     }
 
     return NextResponse.json(result)
