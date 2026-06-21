@@ -101,6 +101,8 @@ export function AdminNav({ role, siteName = 'My Site' }: { role?: string; siteNa
   const pathname = usePathname()
   const isMaster = role === 'master_admin'
   const isAdmin  = role === 'master_admin' || role === 'admin'
+  // DEBUG — remove after confirming
+  console.log('[AdminNav] role prop:', role, '| isMaster:', isMaster)
 
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
