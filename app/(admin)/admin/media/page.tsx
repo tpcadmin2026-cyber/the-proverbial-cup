@@ -1,19 +1,12 @@
+export const dynamic = 'force-dynamic'
+
 import type { Metadata } from 'next'
 export const metadata: Metadata = { title: 'Media' }
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { MediaLibrary } from './MediaLibrary'
-import { getSetting } from '@/lib/settings'
 
 export default async function MediaPage() {
-  const [r2AccountId, r2Bucket] = await Promise.all([
-    getSetting<string>('r2.accountId', ''),
-    getSetting<string>('r2.bucket', ''),
-  ])
-
-  const configured = !!(
-    (process.env.R2_ACCOUNT_ID || r2AccountId) &&
-    (process.env.R2_BUCKET || r2Bucket)
-  )
+  const configured = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
 
   return (
     <>
