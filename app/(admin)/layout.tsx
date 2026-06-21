@@ -31,6 +31,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="admin-layout flex min-h-screen bg-[#f8f7f4]">
+      {/* DEBUG — remove after confirming role */}
+      <div style={{ position: 'fixed', bottom: 8, right: 8, zIndex: 9999, background: '#333', color: '#fff', fontSize: 11, padding: '4px 8px', borderRadius: 4, opacity: 0.85 }}>
+        role: {session.user.role ?? 'undefined'}
+      </div>
       <AdminNav role={session.user.role} siteName={siteName} />
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {children}

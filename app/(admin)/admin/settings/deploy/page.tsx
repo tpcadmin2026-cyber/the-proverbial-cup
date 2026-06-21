@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { getRecentBackups } from '@/lib/backup'
 import { getChangelog } from '@/lib/changelog'

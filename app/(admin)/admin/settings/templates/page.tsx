@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { TemplateManager } from './TemplateManager'
 import { requireAdmin } from '@/lib/auth'
