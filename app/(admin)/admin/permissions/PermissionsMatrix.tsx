@@ -69,6 +69,21 @@ export function PermissionsMatrix({ categories, permissions, roles, roleLabels, 
     }
   }
 
+  async function handleResetToDefaults() {
+    if (!confirm('Reset ALL role permissions to built-in defaults? This will overwrite any custom changes.')) return
+    setSaving(true); setError(null)
+    try {
+      const res = await fetch('/api/admin/permissions', { method: 'PUT' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      // Reload to reflect new DB state
+      window.location.reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset')
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       {/* Category tabs */}
@@ -162,6 +177,13 @@ export function PermissionsMatrix({ categories, permissions, roles, roleLabels, 
           className="px-5 py-2 bg-[#C4AB77] text-white text-sm font-semibold rounded hover:bg-[#7a5c10] transition-colors disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save permissions'}
+        </button>
+        <button
+          onClick={handleResetToDefaults}
+          disabled={saving}
+          className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
+        >
+          Reset to defaults
         </button>
         {saved  && <span className="text-sm text-green-600 font-medium">✓ Permissions saved</span>}
         {error  && <span className="text-sm text-red-600">{error}</span>}

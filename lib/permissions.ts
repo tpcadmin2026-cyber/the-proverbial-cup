@@ -190,10 +190,13 @@ export const PERMISSION_DEFINITIONS: Array<{
 export const ROLE_DEFAULTS: Record<string, PermissionKey[]> = {
   master_admin: Object.values(PERMISSIONS) as PermissionKey[], // everything
 
+  // Business administrator — full operational control, no IT/security panel.
+  // Manages everything the business needs; cannot touch server config or change role permissions.
   admin: [
     'content.view', 'content.create', 'content.edit', 'content.publish', 'content.delete',
     'users.view', 'users.invite', 'users.edit', 'users.delete', 'users.manage_roles',
-    'subscriptions.view', 'subscriptions.manage_plans', 'subscriptions.manage_members', 'subscriptions.pause', 'subscriptions.cancel', 'subscriptions.refund',
+    'subscriptions.view', 'subscriptions.manage_plans', 'subscriptions.manage_members',
+    'subscriptions.pause', 'subscriptions.cancel', 'subscriptions.refund',
     'store.view', 'store.manage_products', 'store.view_orders', 'store.manage_orders', 'store.refund',
     'support.view', 'support.respond', 'support.close', 'support.assign', 'support.delete',
     'help.view', 'help.manage_kb', 'help.manage_requests',
@@ -202,52 +205,57 @@ export const ROLE_DEFAULTS: Record<string, PermissionKey[]> = {
     'features.view', 'features.toggle',
     'settings.view', 'settings.edit',
     'deploy.view',
-    'permissions.view', 'permissions.edit',
+    'permissions.view',
     'newsletter.view', 'newsletter.export',
     'waitlist.view', 'waitlist.export',
     'quiz.view', 'quiz.manage',
     'chat.view', 'chat.manage',
-    // NOT: settings.connections, deploy.trigger, deploy.rollback, users.impersonate
+    // NOT: settings.connections, deploy.trigger, deploy.rollback,
+    //      users.impersonate, permissions.edit (only master_admin changes role permissions)
   ],
 
+  // Operations manager — runs day-to-day, handles customers and content.
+  // Can manage orders, subscriptions, and support but cannot delete, refund, or touch settings.
   manager: [
     'content.view', 'content.create', 'content.edit', 'content.publish',
-    // NOT content.delete
-    'users.view',
-    // NOT invite, delete, manage_roles, impersonate
-    'subscriptions.view', 'subscriptions.manage_members', 'subscriptions.pause',
-    // NOT manage_plans, cancel, refund
-    'store.view', 'store.manage_products', 'store.view_orders', 'store.manage_orders',
-    // NOT store.refund
+    // NOT content.delete — escalate to admin
+    'users.view', 'users.invite',
+    // Can invite employees only; cannot edit roles, delete users, or manage accounts
+    'subscriptions.view', 'subscriptions.manage_members', 'subscriptions.pause', 'subscriptions.cancel',
+    // NOT manage_plans (strategic, admin only), NOT refund (financial, admin only)
+    'store.view', 'store.view_orders', 'store.manage_orders',
+    // NOT manage_products (catalogue changes are admin level), NOT store.refund
     'support.view', 'support.respond', 'support.close', 'support.assign',
     // NOT support.delete
     'help.view', 'help.manage_kb', 'help.manage_requests',
-    'analytics.view',
-    'changelog.view',
-    'features.view',
-    'settings.view',
+    'analytics.view', 'analytics.export',
+    'changelog.view', 'changelog.create',
     'newsletter.view', 'newsletter.export',
     'waitlist.view', 'waitlist.export',
     'quiz.view', 'quiz.manage',
     'chat.view',
-    // NOT permissions, deploy, settings.edit/connections, chat.manage
+    // NOT: features.toggle, settings (any), deploy, permissions, chat.manage,
+    //      users.edit/delete/manage_roles, subscriptions.manage_plans/refund, store.manage_products/refund
   ],
 
+  // Front-line employee — customer service and order fulfilment only.
+  // Read access to most areas; can act only on support tickets and orders.
   employee: [
-    'content.view', 'content.create', 'content.edit',
-    // NOT publish, delete
-    'users.view',
-    // NOT any user management
+    'content.view',
+    // NOT create/edit/publish/delete — content is managed by manager and above
     'subscriptions.view',
+    // NOT any subscription management
     'store.view', 'store.view_orders', 'store.manage_orders',
-    // NOT manage_products, refund
+    // NOT manage_products, NOT refund
     'support.view', 'support.respond',
-    // NOT close, assign, delete
+    // NOT close, assign, delete — escalate to manager
     'help.view',
-    'analytics.view',
-    'changelog.view',
-    'features.view',
-    // NOT any settings, deploy, features.toggle, permissions
+    'newsletter.view',
+    'waitlist.view',
+    'quiz.view',
+    'chat.view',
+    // NOT: users, analytics, changelog, features, settings, deploy, permissions,
+    //      content editing, any management or export actions
   ],
 }
 
