@@ -11,9 +11,10 @@ body {
   font-family: 'Libre Baskerville', serif;
 }
 
-/* overflow:hidden is applied only on the site (Victorian template) via .site-root,
-   never on admin pages which need normal scrolling. */
-.site-root { width: 100vw; height: 100vh; overflow: hidden; }
+/* The Victorian newspaper homepage uses a fixed viewport layout.
+   All other site pages (shop, pricing, account, etc.) scroll normally. */
+.site-root { width: 100%; }
+.site-root.newspaper-layout { height: 100vh; overflow: hidden; }
 
 /* ── Victorian template ────────────────────────────────────────────────────── */
 :root {

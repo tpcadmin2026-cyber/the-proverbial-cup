@@ -68,7 +68,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <PostHogProvider apiKey={analyticsEnabled ? phKey : ''} host={phHost}>
       <CartProvider>
-        <div className="site-root">
+        <div className={`site-root${isNewspaper ? ' newspaper-layout' : ''}`}>
           {children}
           {!isNewspaper && <FooterWrapper />}
           {aiEnabled && (
