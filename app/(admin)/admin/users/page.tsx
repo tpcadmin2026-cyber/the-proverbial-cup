@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { ROLE_LABELS } from '@/lib/access'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { InvitePanel } from './InvitePanel'
 
 export default async function UsersPage() {
   const users = await db.user.findMany({
@@ -52,6 +53,9 @@ export default async function UsersPage() {
             ))}
           </div>
         </section>
+
+        {/* Invite */}
+        <InvitePanel />
 
         {/* User table */}
         <section className="bg-white rounded-lg border border-gray-200 overflow-hidden">
