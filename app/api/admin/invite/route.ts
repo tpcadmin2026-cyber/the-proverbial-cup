@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
     }
 
-    const baseUrl = req.nextUrl.origin
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin
     const inviteToken = await createVerificationToken(email, 'verify', 60 * 72)
     const link = `${baseUrl}/accept-invite?token=${inviteToken}&email=${encodeURIComponent(email)}&role=${role}`
 
