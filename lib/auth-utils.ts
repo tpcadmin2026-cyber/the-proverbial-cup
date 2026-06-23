@@ -200,19 +200,31 @@ export async function sendInviteEmail(
 ) {
   const token = await createVerificationToken(email, 'verify', 60 * 72) // 72 hours
   const url   = `${baseUrl}/accept-invite?token=${token}&email=${encodeURIComponent(email)}&role=${role}`
+  await sendInviteEmailWithLink({ to: email, link: url, role, inviterName, baseUrl })
+}
 
+// Send an invite email using a pre-built link (avoids creating a second token).
+export async function sendInviteEmailWithLink({
+  to, link, role, inviterName, baseUrl: _baseUrl,
+}: {
+  to: string
+  link: string
+  role: string
+  inviterName: string
+  baseUrl: string
+}) {
   const { siteName, footerText, logoUrl } = await getEmailConfig()
 
   const { TeamInvite } = await import('@/emails/TeamInvite')
   await sendHtmlEmail({
-    to:      email,
+    to,
     subject: `You have been invited to ${siteName}`,
-    react:   React.createElement(TeamInvite, { inviterName, role, acceptUrl: url, siteName, footerText: footerText || undefined, logoUrl: logoUrl || undefined }),
+    react:   React.createElement(TeamInvite, { inviterName, role, acceptUrl: link, siteName, footerText: footerText || undefined, logoUrl: logoUrl || undefined }),
   })
 
   await logChange({
     eventType: 'manual',
-    title:     `Invitation sent to ${email} (${role})`,
+    title:     `Invitation sent to ${to} (${role})`,
     actor:     inviterName,
   })
 }
