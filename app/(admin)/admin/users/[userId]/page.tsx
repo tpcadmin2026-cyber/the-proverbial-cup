@@ -1,8 +1,12 @@
+export const dynamic = 'force-dynamic'
+
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { UserEditor } from './UserEditor'
+import { UserPermissionsEditor } from './UserPermissionsEditor'
+import { PERMISSION_CATEGORIES, PERMISSION_DEFINITIONS } from '@/lib/permissions'
 
 interface Props {
   params: Promise<{ userId: string }>
@@ -11,23 +15,41 @@ interface Props {
 export default async function UserDetailPage({ params }: Props) {
   const { userId } = await params
 
-  const [user, plans] = await Promise.all([
+  const [user, plans, rolePermissions, userPermissions] = await Promise.all([
     db.user.findUnique({
       where: { id: userId },
-      include: {
-        subscription: { include: { plan: true } },
-      },
+      include: { subscription: { include: { plan: true } } },
     }),
     db.subscriptionPlan.findMany({ where: { visible: true }, orderBy: { displayOrder: 'asc' } }),
+    db.rolePermission.findMany({ include: { permission: true } }),
+    db.userPermission.findMany({ where: { userId }, include: { permission: true } }),
   ])
 
   if (!user) notFound()
+
+  // Build role defaults map for this user's role
+  const roleDefaults: Record<string, boolean> = {}
+  if (user.role === 'master_admin') {
+    for (const p of PERMISSION_DEFINITIONS) roleDefaults[p.key] = true
+  } else {
+    for (const rp of rolePermissions) {
+      if (rp.role === user.role) roleDefaults[rp.permission.key] = rp.granted
+    }
+  }
+
+  // Build current overrides map
+  const initialOverrides: Record<string, boolean> = {}
+  for (const up of userPermissions) {
+    initialOverrides[up.permission.key] = up.granted
+  }
+
+  const isMasterAdmin = user.role === 'master_admin'
 
   return (
     <>
       <AdminHeader
         title={user.name ?? user.email}
-        subtitle={`${user.role} · joined ${format(user.createdAt, 'dd MMM yyyy')}`}
+        subtitle={`${user.role.replace('_', ' ')} · joined ${format(user.createdAt, 'dd MMM yyyy')}`}
       />
       <div className="p-8 max-w-2xl space-y-6">
 
@@ -74,7 +96,23 @@ export default async function UserDetailPage({ params }: Props) {
         </div>
 
         {/* Editable fields */}
-        <UserEditor user={{ id: user.id, name: user.name ?? '', role: user.role }} plans={plans} subscription={user.subscription ? { planId: user.subscription.planId, status: user.subscription.status } : null} />
+        <UserEditor
+          user={{ id: user.id, name: user.name ?? '', role: user.role }}
+          plans={plans}
+          subscription={user.subscription ? { planId: user.subscription.planId, status: user.subscription.status } : null}
+        />
+
+        {/* Per-user permission overrides — not shown for master_admin (always has everything) */}
+        {!isMasterAdmin && (
+          <UserPermissionsEditor
+            userId={userId}
+            userRole={user.role}
+            categories={PERMISSION_CATEGORIES}
+            permissions={PERMISSION_DEFINITIONS}
+            roleDefaults={roleDefaults}
+            initialOverrides={initialOverrides}
+          />
+        )}
 
       </div>
     </>
