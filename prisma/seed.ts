@@ -66,7 +66,7 @@ const DEFAULT_SETTINGS = [
   { key: 'email.footer',      group: 'email', label: 'Email footer text',    helpText: 'Shown at the bottom of every email you send.', inputType: 'textarea', value: '"© The Victorian Illustrated Gazette · Unsubscribe · Privacy Policy"' },
 
   // Payments
-  { key: 'payments.currency',      group: 'payments', label: 'Currency',             helpText: 'The currency used for all prices. Use a 3-letter code, e.g. GBP, USD, EUR.', inputType: 'text', value: '"USD"' },
+  { key: 'payments.currency', group: 'payments', label: 'Currency', helpText: 'The currency used for all prices and Stripe checkout.', inputType: 'select', value: '"USD"', options: JSON.stringify([{ value: 'USD', label: 'USD — US Dollar ($)' }, { value: 'CAD', label: 'CAD — Canadian Dollar (CA$)' }, { value: 'GBP', label: 'GBP — British Pound (£)' }, { value: 'EUR', label: 'EUR — Euro (€)' }, { value: 'AUD', label: 'AUD — Australian Dollar (A$)' }, { value: 'NZD', label: 'NZD — New Zealand Dollar (NZ$)' }]) },
   { key: 'payments.freeShipping',  group: 'payments', label: 'Free shipping threshold', helpText: 'Orders above this amount get free shipping. Set to 0 to disable.', inputType: 'number', value: '0' },
   { key: 'payments.taxRate',       group: 'payments', label: 'Default tax rate (%)', helpText: 'The default tax percentage applied to orders.', inputType: 'number', value: '20' },
 
