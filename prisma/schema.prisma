@@ -411,6 +411,20 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Invite {
+  id          String    @id @default(cuid())
+  email       String
+  role        String
+  token       String    @unique
+  invitedBy   String
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([email])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // KNOWLEDGE BASE — Help centre articles
 // ─────────────────────────────────────────────────────────────────────────────

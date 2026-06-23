@@ -28,6 +28,12 @@ export async function POST(req: NextRequest) {
       create: { name, email, passwordHash, role, emailVerified: new Date() },
     })
 
+    // Mark the invite as accepted
+    await db.invite.updateMany({
+      where: { email, token, acceptedAt: null, revokedAt: null },
+      data: { acceptedAt: new Date() },
+    })
+
     const sessionToken = await createSession(user.id)
 
     const response = NextResponse.json({ ok: true })

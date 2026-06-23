@@ -24,14 +24,25 @@ export async function POST(req: NextRequest) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.nextUrl.origin
+    const inviterName = session.user.name ?? session.user.email
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 72)
+
     const inviteToken = await createVerificationToken(email, 'verify', 60 * 72)
     const link = `${baseUrl}/accept-invite?token=${inviteToken}&email=${encodeURIComponent(email)}&role=${role}`
 
-    // Attempt to send email — if it fails (e.g. Resend not configured or free-plan limits),
-    // we still return the link so the admin can share it manually.
+    // Revoke any previous pending invite for this email so only one is active at a time
+    await db.invite.updateMany({
+      where: { email, acceptedAt: null, revokedAt: null },
+      data: { revokedAt: new Date() },
+    })
+
+    await db.invite.create({
+      data: { email, role, token: inviteToken, invitedBy: inviterName, expiresAt },
+    })
+
     let emailSent = false
     try {
-      await sendInviteEmailWithLink({ to: email, link, role, inviterName: session.user.name ?? session.user.email, baseUrl })
+      await sendInviteEmailWithLink({ to: email, link, role, inviterName, baseUrl })
       emailSent = true
     } catch (emailErr) {
       console.warn('[invite] email send failed (link still usable):', emailErr)
