@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const [successUrl, cancelUrl, currency] = await Promise.all([
     getSetting<string>('stripe.successUrl', '/account?payment=success'),
     getSetting<string>('stripe.cancelUrl', '/pricing'),
-    getSetting<string>('payments.currency', 'GBP'),
+    getSetting<string>('payments.currency', 'USD'),
   ])
 
   const baseUrl = req.nextUrl.origin

@@ -34,7 +34,7 @@ export default async function CorporatePage() {
     }
   }
 
-  const currency = await getSetting<string>('payments.currency', 'GBP')
+  const currency = await getSetting<string>('payments.currency', 'USD')
 
   return (
     <div

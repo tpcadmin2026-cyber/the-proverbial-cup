@@ -22,7 +22,7 @@ export default async function OrdersPage() {
                   <div className="font-medium text-gray-900">{o.customerEmail}</div>
                   <div className="text-xs text-gray-400 mt-0.5">{format(o.createdAt, 'dd MMM yyyy')}{o.trackingNumber ? ` · Tracking: ${o.trackingNumber}` : ''}</div>
                 </div>
-                <div className="text-gray-600">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: o.currency }).format(o.totalCents / 100)}</div>
+                <div className="text-gray-600">{new Intl.NumberFormat('en-US', { style: 'currency', currency: o.currency }).format(o.totalCents / 100)}</div>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${
                   o.status === 'paid'      ? 'bg-green-100 text-green-700' :
                   o.status === 'pending'   ? 'bg-yellow-100 text-yellow-700' :

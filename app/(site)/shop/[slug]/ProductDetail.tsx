@@ -21,7 +21,7 @@ interface Props {
 }
 
 function formatPrice(cents: number, currency: string) {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
 }
 
 export function ProductDetail({ product, currency }: Props) {

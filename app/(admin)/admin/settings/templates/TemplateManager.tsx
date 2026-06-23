@@ -141,7 +141,7 @@ export function TemplateManager() {
                   {previewMeta.description && <div className="text-xs text-gray-500 italic mt-0.5">{previewMeta.description}</div>}
                   {previewMeta.generatedAt && (
                     <div className="text-xs text-gray-400 mt-0.5">
-                      Exported {new Date(previewMeta.generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      Exported {new Date(previewMeta.generatedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </div>
                   )}
                 </div>

@@ -36,7 +36,7 @@ export default async function ProductPage({
       where: { slug, visible: true },
       include: { variants: true },
     }),
-    getSetting<string>('payments.currency', 'GBP'),
+    getSetting<string>('payments.currency', 'USD'),
   ])
 
   if (!product) notFound()

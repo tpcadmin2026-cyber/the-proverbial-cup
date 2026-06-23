@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 function formatPrice(cents: number, currency: string) {
-  return new Intl.NumberFormat('en-GB', {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
@@ -32,7 +32,7 @@ export default async function SubscribePlanPage({
 
   const [plan, currency, stripeReady] = await Promise.all([
     db.subscriptionPlan.findUnique({ where: { slug, visible: true } }),
-    getSetting<string>('payments.currency', 'GBP'),
+    getSetting<string>('payments.currency', 'USD'),
     stripeConfiguredAsync(),
   ])
 

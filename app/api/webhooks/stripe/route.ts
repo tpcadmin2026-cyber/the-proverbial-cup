@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
               customerName: session.customer_details?.name ?? user?.name ?? null,
               lineItems: JSON.stringify([]),
               totalCents: amountTotal,
-              currency: session.currency?.toUpperCase() ?? 'GBP',
+              currency: session.currency?.toUpperCase() ?? 'USD',
               status: 'paid',
               stripePaymentId: session.payment_intent as string ?? null,
               shippingAddress: session.shipping_details ? JSON.stringify(session.shipping_details) : null,

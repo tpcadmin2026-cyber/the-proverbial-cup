@@ -47,7 +47,7 @@ export default async function CorporateDashboardPage() {
     orderBy: { displayOrder: 'asc' },
     select: { id: true, name: true, priceMonthly: true },
   })
-  const currency = await getSetting<string>('payments.currency', 'GBP')
+  const currency = await getSetting<string>('payments.currency', 'USD')
 
   const active = account.gifts.filter((g) => g.status === 'active').length
   const pending = account.gifts.filter((g) => g.status === 'pending').length

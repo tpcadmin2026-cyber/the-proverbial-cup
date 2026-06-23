@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required order fields.' }, { status: 400 })
   }
 
-  const currency = await getSetting<string>('payments.currency', 'GBP')
+  const currency = await getSetting<string>('payments.currency', 'USD')
 
   // Try to find the logged-in user to associate the order
   const cookieStore = await cookies()

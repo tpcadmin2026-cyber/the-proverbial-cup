@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useCart } from '@/components/site/CartContext'
 
 function formatPrice(cents: number) {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(cents / 100)
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(cents / 100)
 }
 
 export function CartView() {

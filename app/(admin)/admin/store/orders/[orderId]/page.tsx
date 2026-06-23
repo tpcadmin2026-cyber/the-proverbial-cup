@@ -16,8 +16,8 @@ const STATUS_STYLES: Record<string, string> = {
   refunded:  'bg-red-100 text-red-700',
 }
 
-function formatPrice(cents: number, currency = 'GBP') {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency, minimumFractionDigits: 2 }).format(cents / 100)
+function formatPrice(cents: number, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2 }).format(cents / 100)
 }
 
 export default async function OrderDetailPage({ params }: Props) {

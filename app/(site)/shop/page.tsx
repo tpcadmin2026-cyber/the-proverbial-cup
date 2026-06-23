@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 function formatPrice(cents: number, currency: string) {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
 }
 
 export default async function ShopPage() {
@@ -29,7 +29,7 @@ export default async function ShopPage() {
       orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }],
       include: { variants: true },
     }),
-    getSetting<string>('payments.currency', 'GBP'),
+    getSetting<string>('payments.currency', 'USD'),
   ])
 
   // Group by category; uncategorised products go into a "" bucket rendered last

@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 function formatPrice(cents: number, currency: string) {
-  return new Intl.NumberFormat('en-GB', {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
@@ -35,7 +35,7 @@ export default async function PricingPage() {
       where: { visible: true },
       orderBy: { displayOrder: 'asc' },
     }),
-    getSetting<string>('payments.currency', 'GBP'),
+    getSetting<string>('payments.currency', 'USD'),
   ])
 
   return (

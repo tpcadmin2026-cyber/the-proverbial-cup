@@ -29,7 +29,7 @@ export function PauseForm({ planName, maxPauseDays }: Props) {
 
   function formatDisplay(iso: string) {
     if (!iso) return ''
-    return new Date(iso + 'T12:00:00').toLocaleDateString('en-GB', {
+    return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     })
   }

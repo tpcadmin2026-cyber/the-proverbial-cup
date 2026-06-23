@@ -226,7 +226,7 @@ export function SetupWizard({ steps, currentStepKey }: Props) {
                     {templateMeta.description && <div className="text-xs text-gray-500 italic mt-0.5">{templateMeta.description}</div>}
                     {templateMeta.generatedAt && (
                       <div className="text-xs text-gray-400 mt-1">
-                        Exported {new Date(templateMeta.generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        Exported {new Date(templateMeta.generatedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </div>
                     )}
                     <div className="text-xs text-[#C4AB77] mt-1">Click to choose a different file</div>

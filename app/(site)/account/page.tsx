@@ -27,7 +27,7 @@ export default async function AccountPage() {
 
   const [siteName, currency] = await Promise.all([
     getSetting<string>('site.name', 'My Site'),
-    getSetting<string>('payments.currency', 'GBP'),
+    getSetting<string>('payments.currency', 'USD'),
   ])
 
   const user = session.user

@@ -33,7 +33,7 @@ interface Props {
 
 function fmt(cents: number | null, currency: string) {
   if (cents == null) return 'Free'
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
 }
 
 export function GiftDashboard({ accountId, gifts: initial, plans, currency }: Props) {
