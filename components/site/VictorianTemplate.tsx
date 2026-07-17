@@ -37,10 +37,10 @@ interface Props {
 }
 
 const DEFAULT_PAGES: PageWithBlocks[] = [
-  { id: 'p1', tabNumeral: 'I',   tabLabel: 'Front Page',         pageOrder: 1, slug: 'front-page',         layout: 'columns-3', published: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
-  { id: 'p2', tabNumeral: 'II',  tabLabel: 'Foreign & Commerce', pageOrder: 2, slug: 'foreign-commerce',   layout: 'columns-3', published: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
-  { id: 'p3', tabNumeral: 'III', tabLabel: 'Science & Arts',     pageOrder: 3, slug: 'science-arts',       layout: 'columns-3', published: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
-  { id: 'p4', tabNumeral: 'IV',  tabLabel: 'Sport & Letters',    pageOrder: 4, slug: 'sport-letters',      layout: 'columns-3', published: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'p1', tabNumeral: 'I',   tabLabel: 'Front Page',         pageOrder: 1, slug: 'front-page',         layout: 'columns-3', published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'p2', tabNumeral: 'II',  tabLabel: 'Foreign & Commerce', pageOrder: 2, slug: 'foreign-commerce',   layout: 'columns-3', published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'p3', tabNumeral: 'III', tabLabel: 'Science & Arts',     pageOrder: 3, slug: 'science-arts',       layout: 'columns-3', published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'p4', tabNumeral: 'IV',  tabLabel: 'Sport & Letters',    pageOrder: 4, slug: 'sport-letters',      layout: 'columns-3', published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
 ]
 
 /** Convert markdown-lite inline markup to HTML safe string */
@@ -124,7 +124,7 @@ function renderBlock(block: ContentBlock) {
 export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, masthead: mh }: Props) {
   const m = { ...DEFAULT_MASTHEAD, ...mh }
   const activePages = pages.length > 0 ? pages : DEFAULT_PAGES
-  const navPages = activePages.map((p) => ({ id: p.id, tabNumeral: p.tabNumeral, tabLabel: p.tabLabel, pageOrder: p.pageOrder }))
+  const navPages = activePages.map((p) => ({ id: p.id, tabNumeral: p.tabNumeral, tabLabel: p.tabLabel, pageOrder: p.pageOrder, showInNav: p.showInNav }))
 
   return (
     <div className="shell">

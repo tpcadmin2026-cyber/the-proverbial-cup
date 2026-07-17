@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import type { NavItem } from '@prisma/client'
 
-interface Page { id: string; tabNumeral: string; tabLabel: string; pageOrder: number }
+interface Page { id: string; tabNumeral: string; tabLabel: string; pageOrder: number; showInNav: boolean }
 
 interface Props {
   pages: Page[]
@@ -13,15 +13,22 @@ interface Props {
 export function VictorianNav({ pages, navItems }: Props) {
   useEffect(() => {
     // Build a merged, sorted list of all tabs
-    // Pages slide the viewport; nav items navigate to a URL
-    type PageTab = { kind: 'page'; id: string; num: string; label: string; pageIndex: number; order: number }
+    // Pages slide the viewport; nav items navigate to a URL.
+    // A page with showInNav === false still slides into view (e.g. via a direct admin link)
+    // but gets no entry in the tab rail.
+    type PageTab = { kind: 'page'; id: string; rawId: string; num: string; label: string; pageIndex: number; order: number }
     type LinkTab = { kind: 'link'; id: string; num: string; label: string; href: string; openInNewTab: boolean; order: number }
     type Tab = PageTab | LinkTab
 
-    const pageTabs: PageTab[] = pages.map((p, i) => ({
-      kind: 'page', id: `page-${p.id}`, num: p.tabNumeral, label: p.tabLabel,
-      pageIndex: i, order: p.pageOrder,
-    }))
+    // pageIndex always refers to the position in the full `pages` array (and pageEls below),
+    // regardless of whether that page has a nav tab.
+    const pageTabs: PageTab[] = pages
+      .map((p, i) => ({
+        kind: 'page' as const, id: `page-${p.id}`, rawId: p.id, num: p.tabNumeral, label: p.tabLabel,
+        pageIndex: i, order: p.pageOrder, showInNav: p.showInNav,
+      }))
+      .filter((t) => t.showInNav)
+      .map(({ showInNav: _showInNav, ...rest }) => rest)
 
     const linkTabs: LinkTab[] = navItems.map((n) => ({
       kind: 'link', id: `nav-${n.id}`, num: n.numeral, label: n.label,
@@ -31,7 +38,7 @@ export function VictorianNav({ pages, navItems }: Props) {
     const ALL_TABS: Tab[] = [...pageTabs, ...linkTabs].sort((a, b) => a.order - b.order)
 
     const SLIDE = 500
-    let cur = 0 // index into pageTabs (NOT allTabs)
+    let cur = 0 // index into `pages` / `pageEls` (the full array, including nav-hidden pages)
     let locked = false
 
     const pageEls = pages.map((p) => document.getElementById(`page-${p.id}`))
@@ -60,14 +67,21 @@ export function VictorianNav({ pages, navItems }: Props) {
     function renderTabs() {
       tabsL!.innerHTML = ''; tabsR!.innerHTML = ''
 
-      // Current page tab — find it in ALL_TABS to know its position
-      const curTab = pageTabs[cur]
-      const curGlobalIdx = ALL_TABS.findIndex((t) => t.id === curTab?.id)
+      const curId = `page-${pages[cur]?.id}`
+      let splitIdx = ALL_TABS.findIndex((t) => t.id === curId)
+      let excludeCurrent = true
+      if (splitIdx === -1) {
+        // Current page has no tab of its own (hidden from nav) — split the rail by order instead
+        const curOrder = pages[cur]?.pageOrder ?? -Infinity
+        splitIdx = ALL_TABS.findIndex((t) => t.order > curOrder)
+        if (splitIdx === -1) splitIdx = ALL_TABS.length
+        excludeCurrent = false
+      }
 
       // Left rail: everything before the current page tab in global order
-      const leftTabs = ALL_TABS.slice(0, curGlobalIdx).reverse()
+      const leftTabs = ALL_TABS.slice(0, splitIdx).reverse()
       // Right rail: everything after the current page tab in global order
-      const rightTabs = ALL_TABS.slice(curGlobalIdx + 1)
+      const rightTabs = ALL_TABS.slice(splitIdx + (excludeCurrent ? 1 : 0))
 
       for (const tab of leftTabs)  tabsL!.appendChild(makeTab(tab, false))
       for (const tab of rightTabs) tabsR!.appendChild(makeTab(tab, false))
@@ -75,8 +89,8 @@ export function VictorianNav({ pages, navItems }: Props) {
       tabsL!.style.width = leftTabs.length  > 0 ? '' : '14px'
       tabsR!.style.width = rightTabs.length > 0 ? '' : '14px'
 
-      // If only one page, show an active tab so the user can see which page they're on
-      if (pages.length === 1 && navItems.length === 0) {
+      // If there's only a single tab in the whole rail, show it as active so visitors can see where they are
+      if (pageTabs.length === 1 && linkTabs.length === 0) {
         const b = document.createElement('div')
         b.className = 'pg-tab pg-tab-active'
         b.innerHTML = `<span class="tab-num">${pageTabs[0].num}</span><span class="tab-label">${pageTabs[0].label}</span>`
@@ -110,19 +124,19 @@ export function VictorianNav({ pages, navItems }: Props) {
       locked = true; cur = pageIndex
       position(true); renderTabs()
       pageEls[cur]?.scrollTo(0, 0)
-      window.dispatchEvent(new CustomEvent('gazette:pagechange', { detail: { pageId: pageTabs[cur].id } }))
+      window.dispatchEvent(new CustomEvent('gazette:pagechange', { detail: { pageId: pages[cur].id } }))
       setTimeout(() => { locked = false }, SLIDE + 40)
     }
 
     function onGoto(e: Event) {
       const targetId = (e as CustomEvent<{ pageId: string }>).detail?.pageId
-      const tab = pageTabs.find((t) => t.id === targetId)
-      if (tab) goTo(tab.pageIndex)
+      const targetIndex = pages.findIndex((p) => p.id === targetId)
+      if (targetIndex !== -1) goTo(targetIndex)
     }
     window.addEventListener('gazette:goto', onGoto)
 
     position(false); renderTabs()
-    window.dispatchEvent(new CustomEvent('gazette:pagechange', { detail: { pageId: pageTabs[0]?.id } }))
+    window.dispatchEvent(new CustomEvent('gazette:pagechange', { detail: { pageId: pages[0]?.id } }))
     window.addEventListener('resize', () => position(false))
 
     return () => {

@@ -7,7 +7,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
     await requireAdmin()
     const { pageId } = await params
     const {
-      tabLabel, tabNumeral, pageOrder, layout, sectionLabel, published,
+      tabLabel, tabNumeral, pageOrder, layout, sectionLabel, published, showInNav,
       publishAt, seoTitle, seoDescription, seoImage, customCss, customJs,
       blocks,
     } = await req.json()
@@ -24,6 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
         ...(layout !== undefined && { layout }),
         ...(sectionLabel !== undefined && { sectionLabel: sectionLabel || null }),
         ...(published !== undefined && { published }),
+        ...(showInNav !== undefined && { showInNav }),
         ...(publishAt !== undefined && { publishAt: publishAt ? new Date(publishAt) : null }),
         ...(seoTitle !== undefined && { seoTitle: seoTitle || null }),
         ...(seoDescription !== undefined && { seoDescription: seoDescription || null }),

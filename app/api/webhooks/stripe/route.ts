@@ -3,7 +3,8 @@ import { db } from '@/lib/db'
 import { getStripeAsync } from '@/lib/stripe'
 import { logChange } from '@/lib/changelog'
 import { trackEvent } from '@/lib/posthog'
-import { sendSubscriptionConfirmationEmail, sendOrderConfirmationEmail } from '@/lib/auth-utils'
+import { sendSubscriptionConfirmationEmail, sendOrderConfirmationEmail, sendNewOrderAdminEmail } from '@/lib/auth-utils'
+import { createNotification } from '@/lib/notifications'
 import type Stripe from 'stripe'
 
 export async function POST(req: NextRequest) {
@@ -58,17 +59,33 @@ export async function POST(req: NextRequest) {
               billingInterval: interval,
               baseUrl,
             }).catch(console.error)
+            await createNotification({
+              type: 'subscription',
+              title: `New subscriber — ${plan.name}`,
+              body: `${user.email} · ${interval}${price ? ` · ${price}` : ''}`,
+              refId: user.id,
+              metadata: { userId: user.id, email: user.email, name: user.name, planName: plan.name, interval, price },
+            })
           }
         }
 
-        if (session.mode === 'payment' && userId) {
-          const user = await db.user.findUnique({ where: { id: userId } })
+        if (session.mode === 'payment') {
+          const user = userId ? await db.user.findUnique({ where: { id: userId } }) : null
           const amountTotal = session.amount_total ?? 0
-          await db.order.create({
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+
+          const stripeLineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 })
+          const orderItems = stripeLineItems.data.map((li) => ({
+            name: li.description ?? 'Item',
+            quantity: li.quantity ?? 1,
+            price: ((li.amount_total ?? 0) / 100).toFixed(2),
+          }))
+
+          const order = await db.order.create({
             data: {
               customerEmail: session.customer_details?.email ?? user?.email ?? '',
               customerName: session.customer_details?.name ?? user?.name ?? null,
-              lineItems: JSON.stringify([]),
+              lineItems: JSON.stringify(orderItems),
               totalCents: amountTotal,
               currency: session.currency?.toUpperCase() ?? 'USD',
               status: 'paid',
@@ -76,16 +93,37 @@ export async function POST(req: NextRequest) {
               shippingAddress: session.shipping_details ? JSON.stringify(session.shipping_details) : null,
             },
           })
+          const orderNumber = order.id.slice(-8).toUpperCase()
+          const totalFormatted = `${(amountTotal / 100).toFixed(2)}`
           if (user?.email) await trackEvent(user.email, 'order_placed', { total: amountTotal / 100 })
           const orderEmail = session.customer_details?.email ?? user?.email
+          const orderName = session.customer_details?.name ?? user?.name ?? undefined
           if (orderEmail) {
             await sendOrderConfirmationEmail({
               email: orderEmail,
-              name: session.customer_details?.name ?? user?.name ?? undefined,
-              orderNumber: String(Date.now()).slice(-8),
-              items: [],
-              subtotal: `${(amountTotal / 100).toFixed(2)}`,
-              total: `${(amountTotal / 100).toFixed(2)}`,
+              name: orderName,
+              orderNumber,
+              items: orderItems,
+              subtotal: totalFormatted,
+              total: totalFormatted,
+            }).catch(console.error)
+          }
+          await createNotification({
+            type: 'order',
+            title: `New order #${orderNumber} — $${totalFormatted}`,
+            body: `${orderItems.length} item(s) from ${orderEmail ?? 'guest'}`,
+            refId: order.id,
+            metadata: { orderId: order.id, customerEmail: orderEmail, customerName: orderName, items: orderItems, total: totalFormatted },
+          })
+          if (orderEmail) {
+            await sendNewOrderAdminEmail({
+              orderNumber,
+              customerName: orderName,
+              customerEmail: orderEmail,
+              items: orderItems,
+              total: totalFormatted,
+              baseUrl,
+              orderId: order.id,
             }).catch(console.error)
           }
         }

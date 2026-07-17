@@ -245,13 +245,24 @@ function AddBlockDropdown({ anchorRef, onAdd, onClose }: {
   onAdd: (type: string) => void
   onClose: () => void
 }) {
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, openUp: true, maxHeight: 320 })
 
   useEffect(() => {
     if (anchorRef.current) {
       const r = anchorRef.current.getBoundingClientRect()
-      // Show above the button, fixed to viewport
-      setPos({ top: r.top - 4, left: r.left, width: r.width })
+      const margin = 8
+      const spaceAbove = r.top - margin
+      const spaceBelow = window.innerHeight - r.bottom - margin
+      // Prefer opening above the button, but flip below if there isn't enough room
+      const openUp = spaceAbove >= 200 || spaceAbove >= spaceBelow
+      const available = openUp ? spaceAbove : spaceBelow
+      setPos({
+        top: openUp ? r.top - 4 : r.bottom + 4,
+        left: r.left,
+        width: r.width,
+        openUp,
+        maxHeight: Math.max(120, Math.min(available, window.innerHeight * 0.6)),
+      })
     }
   }, [anchorRef])
 
@@ -271,7 +282,9 @@ function AddBlockDropdown({ anchorRef, onAdd, onClose }: {
       data-cms-dropdown
       style={{
         position: 'fixed',
-        bottom: `calc(100vh - ${pos.top}px)`,
+        ...(pos.openUp
+          ? { bottom: `calc(100vh - ${pos.top}px)` }
+          : { top: `${pos.top}px` }),
         left: pos.left,
         width: Math.max(pos.width, 240),
         backgroundColor: '#faf9f4',
@@ -280,7 +293,7 @@ function AddBlockDropdown({ anchorRef, onAdd, onClose }: {
         boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
         zIndex: 99999,
         overflow: 'hidden',
-        maxHeight: '60vh',
+        maxHeight: `${pos.maxHeight}px`,
         overflowY: 'auto',
       }}
     >

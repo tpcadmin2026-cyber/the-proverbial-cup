@@ -299,6 +299,45 @@ export async function sendOrderConfirmationEmail({
   })
 }
 
+export async function sendNewOrderAdminEmail({
+  orderNumber,
+  customerName,
+  customerEmail,
+  items,
+  total,
+  baseUrl,
+  orderId,
+}: {
+  orderNumber: string
+  customerName?: string
+  customerEmail: string
+  items: { name: string; quantity: number; price: string }[]
+  total: string
+  baseUrl: string
+  orderId: string
+}) {
+  const notifyEmail = await getSetting<string>('site.contactEmail', '')
+  if (!notifyEmail) return
+
+  const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const { NewOrderNotification } = await import('@/emails/NewOrderNotification')
+  await sendHtmlEmail({
+    to:      notifyEmail,
+    subject: `New order #${orderNumber} — ${total} from ${customerEmail}`,
+    react:   React.createElement(NewOrderNotification, {
+      orderNumber,
+      customerName,
+      customerEmail,
+      items,
+      total,
+      adminUrl: `${baseUrl}/admin/store/orders/${orderId}`,
+      siteName,
+      footerText: footerText || undefined,
+      logoUrl: logoUrl || undefined,
+    }),
+  })
+}
+
 export async function sendBackupNotificationEmail({
   email,
   trigger,

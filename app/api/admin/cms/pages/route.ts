@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/auth'
 export async function POST(req: NextRequest) {
   try {
     await requireAdmin()
-    const { tabLabel, tabNumeral, pageOrder, layout, sectionLabel, published, blocks } = await req.json()
+    const { tabLabel, tabNumeral, pageOrder, layout, sectionLabel, published, showInNav, blocks } = await req.json()
 
     if (!tabLabel || !tabNumeral) {
       return NextResponse.json({ error: 'Tab label and numeral are required.' }, { status: 400 })
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
         layout: layout ?? 'columns-3',
         sectionLabel: sectionLabel || null,
         published: published ?? false,
+        showInNav: showInNav ?? true,
         blocks: {
           create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; visible?: boolean; blockOrder: number }) => ({
             blockType: b.blockType,

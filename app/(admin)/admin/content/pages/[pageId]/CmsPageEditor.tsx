@@ -53,6 +53,7 @@ export function CmsPageEditor({ page, blocks: initialBlocks, defaultOrder }: Pro
   const [layout, setLayout] = useState(page?.layout ?? 'columns-3')
   const [sectionLabel, setSectionLabel] = useState(page?.sectionLabel ?? '')
   const [published, setPublished] = useState(page?.published ?? false)
+  const [showInNav, setShowInNav] = useState(page?.showInNav ?? true)
   const [publishAt, setPublishAt] = useState(page?.publishAt ? new Date(page.publishAt).toISOString().slice(0, 16) : '')
   const [seoTitle, setSeoTitle] = useState(page?.seoTitle ?? '')
   const [seoDescription, setSeoDescription] = useState(page?.seoDescription ?? '')
@@ -157,7 +158,7 @@ export function CmsPageEditor({ page, blocks: initialBlocks, defaultOrder }: Pro
           method: page ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tabLabel, tabNumeral, pageOrder, layout, sectionLabel, published,
+            tabLabel, tabNumeral, pageOrder, layout, sectionLabel, published, showInNav,
             publishAt: publishAt || null,
             seoTitle: seoTitle || null,
             seoDescription: seoDescription || null,
@@ -226,6 +227,13 @@ export function CmsPageEditor({ page, blocks: initialBlocks, defaultOrder }: Pro
                 <div className="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C4AB77]" />
               </div>
               <span className="text-sm text-gray-700">{published ? 'Published — live on site' : 'Draft — not visible'}</span>
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <div className="relative">
+                <input type="checkbox" checked={showInNav} onChange={e => setShowInNav(e.target.checked)} className="sr-only peer" />
+                <div className="w-10 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#C4AB77]" />
+              </div>
+              <span className="text-sm text-gray-700">{showInNav ? 'Shown in navigation tabs' : 'Hidden from navigation — live but unlisted'}</span>
             </label>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Schedule publish <span className="font-normal normal-case text-gray-400">(optional)</span></label>

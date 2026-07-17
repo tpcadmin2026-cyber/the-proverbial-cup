@@ -61,6 +61,24 @@ model ChangelogEntry {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS — categorized admin inbox (orders, subscriptions, and so on)
+// ─────────────────────────────────────────────────────────────────────────────
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // order | subscription — extend as new categories are added
+  title     String
+  body      String?
+  refId     String?  // id of the related record (Order.id, User.id, ...)
+  metadata  String?  // JSON: structured details for the category-specific detail view
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([read])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // BACKUPS — record of every backup operation
 // ─────────────────────────────────────────────────────────────────────────────
 model BackupRecord {
@@ -123,6 +141,7 @@ model CmsPage {
   footerCenter   String?
   footerRight    String?
   published      Boolean      @default(false)
+  showInNav      Boolean      @default(true) // If false, page is live once published but has no tab in the nav rail
   publishAt      DateTime?    // Schedule publish for a future date/time
   editionDate    String?      // Display string e.g. "Thursday, 14th November, 1878"
   volume         String?      // e.g. "XVI"

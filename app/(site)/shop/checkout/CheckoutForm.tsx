@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useCart } from '@/components/site/CartContext'
 
 interface FormData {
@@ -23,6 +23,7 @@ const grain = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
 
 export function CheckoutForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { items, totalCents, clear } = useCart()
 
   const [form, setForm] = useState<FormData>({
@@ -31,11 +32,17 @@ export function CheckoutForm() {
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [orderId, setOrderId] = useState<string | null>(null)
+  const paymentSucceeded = searchParams.get('success') === '1'
+
+  // Clear the cart once the customer returns from a successful Stripe payment
+  useEffect(() => {
+    if (paymentSucceeded) clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentSucceeded])
 
   const f = (key: keyof FormData, val: string) => setForm((p) => ({ ...p, [key]: val }))
 
-  if (items.length === 0 && !orderId) {
+  if (items.length === 0 && !paymentSucceeded) {
     return (
       <div className="min-h-screen py-16 px-6" style={{ backgroundColor: '#E8E6D8', backgroundImage: grain, backgroundRepeat: 'repeat', backgroundSize: '400px 400px' }}>
         <div className="max-w-lg mx-auto text-center py-20 space-y-4">
@@ -48,25 +55,21 @@ export function CheckoutForm() {
     )
   }
 
-  if (orderId) {
+  if (paymentSucceeded) {
     return (
       <div className="min-h-screen py-16 px-6" style={{ backgroundColor: '#E8E6D8', backgroundImage: grain, backgroundRepeat: 'repeat', backgroundSize: '400px 400px' }}>
         <div className="max-w-lg mx-auto">
           <div className="bg-white rounded-xl border border-[#c8c4a8] shadow-md overflow-hidden">
             <div className="bg-[#35291C] px-8 py-5 text-center">
-              <h1 className="font-playfair text-xl text-[#E8E6D8]">Order Received</h1>
+              <h1 className="font-playfair text-xl text-[#E8E6D8]">Payment Received</h1>
             </div>
             <div className="h-1 bg-gradient-to-r from-[#35291C] via-[#C4AB77] to-[#35291C]" />
             <div className="px-8 py-10 text-center space-y-4">
               <div className="text-4xl text-[#C4AB77]">✦</div>
-              <h2 className="font-playfair text-2xl text-[#35291C]">Thank you, {form.name.split(' ')[0]}</h2>
+              <h2 className="font-playfair text-2xl text-[#35291C]">Thank you for your order</h2>
               <p className="font-baskerville italic text-[#4B4C44] leading-relaxed">
-                Your order has been received and is now in our capable hands.
-                A confirmation shall be dispatched to <strong>{form.email}</strong> directly.
-              </p>
-              <p className="text-xs text-[#C4AB77] font-semibold">Order reference: {orderId.slice(-8).toUpperCase()}</p>
-              <p className="text-xs text-[#4B4C44] italic">
-                Payment will be taken once our payment system is fully connected.
+                Your payment has been received and your order is now in our capable hands.
+                A confirmation has been sent to your email address.
               </p>
               <div className="pt-4 flex flex-col gap-2">
                 <button
@@ -91,34 +94,30 @@ export function CheckoutForm() {
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch('/api/orders', {
+      const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          mode: 'payment',
           customerName: form.name,
           customerEmail: form.email,
           shippingAddress: {
-            address1: form.address1,
-            address2: form.address2,
+            line1: form.address1,
+            line2: form.address2 || undefined,
             city: form.city,
-            postcode: form.postcode,
+            postal_code: form.postcode,
             country: form.country,
           },
           lineItems: items.map((i) => ({
-            productId: i.productId,
-            variantId: i.variantId,
-            name: i.name,
-            variantName: i.variantName,
-            priceInCents: i.priceInCents,
+            name: i.variantName ? `${i.name} — ${i.variantName}` : i.name,
+            amount: i.priceInCents,
             quantity: i.quantity,
           })),
-          totalCents,
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed to place order')
-      clear()
-      setOrderId(data.id)
+      if (!res.ok) throw new Error(data.error ?? 'Failed to start checkout')
+      window.location.href = data.url
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -191,10 +190,10 @@ export function CheckoutForm() {
                     disabled={submitting}
                     className="w-full py-3 bg-[#C4AB77] text-white text-sm font-semibold rounded hover:bg-[#7a5c12] transition-colors disabled:opacity-50"
                   >
-                    {submitting ? 'Placing order…' : 'Place order'}
+                    {submitting ? 'Redirecting to payment…' : 'Continue to payment'}
                   </button>
                   <p className="text-xs text-center text-[#4B4C44] mt-2 italic">
-                    No payment is taken now — your order will be confirmed once Stripe is connected.
+                    You'll be taken to our secure payment provider to complete your purchase.
                   </p>
                 </div>
               </form>

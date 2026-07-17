@@ -24,6 +24,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/admin',               label: 'Overview',      icon: '◈' },
+  { href: '/admin/notifications', label: 'Notifications', icon: '🔔' },
   { href: '/admin/features',      label: 'Features',      icon: '⚙' },
   {
     href: '/admin/users', label: 'Users', icon: '◉',
@@ -104,6 +105,15 @@ export function AdminNav({ role, siteName = 'My Site' }: { role?: string; siteNa
 
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [unreadTotal, setUnreadTotal] = useState(0)
+
+  // Refresh the unread notification count whenever the admin navigates
+  useEffect(() => {
+    fetch('/api/admin/notifications/unread-count')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data) setUnreadTotal(data.total) })
+      .catch(() => {})
+  }, [pathname])
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const open = new Set<string>()
@@ -282,8 +292,20 @@ export function AdminNav({ role, siteName = 'My Site' }: { role?: string; siteNa
                   collapsed && 'justify-center'
                 )}
               >
-                <span className="w-4 text-center opacity-80 flex-shrink-0">{item.icon}</span>
-                {!collapsed && item.label}
+                <span className="w-4 text-center opacity-80 flex-shrink-0 relative">
+                  {item.icon}
+                  {item.href === '/admin/notifications' && unreadTotal > 0 && collapsed && (
+                    <span className="absolute -top-1.5 -right-1.5 w-2 h-2 rounded-full bg-[#C4AB77]" />
+                  )}
+                </span>
+                {!collapsed && (
+                  <span className="flex-1 flex items-center justify-between">
+                    {item.label}
+                    {item.href === '/admin/notifications' && unreadTotal > 0 && (
+                      <span className="text-xs bg-[#C4AB77] text-white rounded-full px-2 py-0.5">{unreadTotal}</span>
+                    )}
+                  </span>
+                )}
               </Link>
             </li>
           )
