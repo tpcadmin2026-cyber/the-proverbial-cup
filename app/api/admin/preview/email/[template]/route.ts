@@ -7,10 +7,15 @@ import { requireAdmin } from '@/lib/auth'
 const SITE = 'My Site'
 const BASE = 'http://localhost:3000'
 
+function formatPrice(amount: number, currency: string) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount)
+}
+
 export async function GET(_req: NextRequest, { params }: { params: { template: string } }) {
   await requireAdmin()
   const siteName = await getSetting<string>('site.name', SITE)
   const footerText = await getSetting<string>('email.footer', `© ${siteName}`)
+  const currency = await getSetting<string>('payments.currency', 'USD')
 
   let element: React.ReactElement | null = null
 
@@ -50,7 +55,7 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
       element = React.createElement(SubscriptionConfirmation, {
         name: 'Archibald Pemberton',
         planName: 'The Connoisseur',
-        price: '£19.99',
+        price: formatPrice(19.99, currency),
         billingInterval: 'monthly',
         accountUrl: `${BASE}/account`,
         siteName,
@@ -64,11 +69,11 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
         name: 'Archibald Pemberton',
         orderNumber: '00042681',
         items: [
-          { name: 'Ethiopian Single Origin — 250g', quantity: 2, price: '£9.99' },
-          { name: 'Copper Pour-Over Set', quantity: 1, price: '£34.99' },
+          { name: 'Ethiopian Single Origin — 250g', quantity: 2, price: formatPrice(9.99, currency) },
+          { name: 'Copper Pour-Over Set', quantity: 1, price: formatPrice(34.99, currency) },
         ],
-        subtotal: '£54.97',
-        total: '£54.97',
+        subtotal: formatPrice(54.97, currency),
+        total: formatPrice(54.97, currency),
         siteName,
         footerText,
       })

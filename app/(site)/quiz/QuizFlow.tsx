@@ -13,11 +13,16 @@ interface Props {
   subheading: string
   resultHeading: string
   resultSubtext: string
+  currency: string
 }
 
 const ORNAMENT = '✦'
 
-export function QuizFlow({ questions, plans, heading, subheading, resultHeading, resultSubtext }: Props) {
+function formatPrice(cents: number, currency: string) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
+}
+
+export function QuizFlow({ questions, plans, heading, subheading, resultHeading, resultSubtext, currency }: Props) {
   const [current, setCurrent] = useState(0)
   const [selections, setSelections] = useState<string[]>([]) // answer ids chosen per question
   const [done, setDone] = useState(false)
@@ -109,7 +114,7 @@ export function QuizFlow({ questions, plans, heading, subheading, resultHeading,
                   )}
                   {recommended.priceMonthly && (
                     <div className="text-[#C4AB77] font-playfair text-lg mb-4">
-                      £{(recommended.priceMonthly / 100).toFixed(2)}/month
+                      {formatPrice(recommended.priceMonthly, currency)}/month
                     </div>
                   )}
                   <Link

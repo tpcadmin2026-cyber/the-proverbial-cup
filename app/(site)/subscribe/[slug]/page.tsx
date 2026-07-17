@@ -138,6 +138,7 @@ export default async function SubscribePlanPage({
             <SubscribeActions
               planSlug={plan.slug}
               planName={plan.name}
+              isFree={plan.priceMonthly == null}
               stripeConfigured={stripeReady}
               hasPriceId={!!plan.stripePriceIdMonthly}
               currentUser={currentUser ? {
@@ -152,7 +153,7 @@ export default async function SubscribePlanPage({
 
         {/* Reassurance */}
         <div className="text-center text-xs text-[#4B4C44] space-y-1">
-          <p>No payment is taken until Stripe is connected — your subscription will be confirmed shortly.</p>
+          <p>Payment is handled securely by Stripe at checkout.</p>
           <p>You may cancel or pause at any time from your account.</p>
         </div>
 

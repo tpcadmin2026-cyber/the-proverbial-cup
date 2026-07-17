@@ -50,7 +50,8 @@ export async function POST(req: NextRequest) {
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
             const interval = user.subscription.billingInterval ?? 'monthly'
             const cents = interval === 'yearly' ? plan.priceYearly : plan.priceMonthly
-            const price = cents != null ? `£${(cents / 100).toFixed(2)}` : ''
+            const currency = session.currency?.toUpperCase() ?? 'USD'
+            const price = cents != null ? new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100) : ''
             await sendSubscriptionConfirmationEmail({
               email: user.email,
               name: user.name ?? undefined,

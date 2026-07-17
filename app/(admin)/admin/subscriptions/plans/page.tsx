@@ -1,9 +1,10 @@
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { db } from '@/lib/db'
+import { getSetting } from '@/lib/settings'
 import { PlanList } from '../PlanList'
 
 export default async function PlansPage() {
-  const [plans, stats] = await Promise.all([
+  const [plans, stats, currency] = await Promise.all([
     db.subscriptionPlan.findMany({ orderBy: { displayOrder: 'asc' } }),
     Promise.all([
       db.userSubscription.count(),
@@ -11,6 +12,7 @@ export default async function PlansPage() {
       db.userSubscription.count({ where: { status: 'paused' } }),
       db.userSubscription.count({ where: { status: 'cancelled' } }),
     ]),
+    getSetting<string>('payments.currency', 'USD'),
   ])
   const [total, active, paused, cancelled] = stats
 
@@ -34,7 +36,7 @@ export default async function PlansPage() {
             </div>
           ))}
         </div>
-        <PlanList initialPlans={plans} />
+        <PlanList initialPlans={plans} currency={currency} />
       </div>
     </>
   )

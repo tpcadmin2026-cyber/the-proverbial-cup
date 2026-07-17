@@ -1,12 +1,20 @@
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { db } from '@/lib/db'
+import { getSetting } from '@/lib/settings'
 import Link from 'next/link'
 
+function formatPrice(cents: number, currency: string) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100)
+}
+
 export default async function ProductsPage() {
-  const products = await db.product.findMany({
-    orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }],
-    include: { variants: true },
-  })
+  const [products, currency] = await Promise.all([
+    db.product.findMany({
+      orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }],
+      include: { variants: true },
+    }),
+    getSetting<string>('payments.currency', 'USD'),
+  ])
 
   return (
     <>
@@ -44,7 +52,7 @@ export default async function ProductsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-sm text-gray-600 font-medium">£{(p.priceInCents / 100).toFixed(2)}</div>
+                  <div className="text-sm text-gray-600 font-medium">{formatPrice(p.priceInCents, currency)}</div>
                   {p.inventory != null && (
                     <div className={`text-xs px-2 py-0.5 rounded ${p.inventory < (p.lowStockAlert ?? 5) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
                       {p.inventory} in stock

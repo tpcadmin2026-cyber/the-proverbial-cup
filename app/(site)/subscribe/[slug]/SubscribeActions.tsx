@@ -6,6 +6,7 @@ import Link from 'next/link'
 interface Props {
   planSlug: string
   planName: string
+  isFree: boolean
   stripeConfigured: boolean
   hasPriceId: boolean
   currentUser: {
@@ -16,36 +17,38 @@ interface Props {
   } | null
 }
 
-export function SubscribeActions({ planSlug, planName, stripeConfigured, hasPriceId, currentUser }: Props) {
+export function SubscribeActions({ planSlug, planName, isFree, stripeConfigured, hasPriceId, currentUser }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const canCheckout = isFree || (stripeConfigured && hasPriceId)
 
   async function handleSubscribe() {
     setSubmitting(true)
     setError(null)
     try {
-      // Use Stripe Checkout when fully configured
-      if (stripeConfigured && hasPriceId) {
-        const res = await fetch('/api/stripe/checkout', {
+      if (isFree) {
+        const res = await fetch('/api/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'subscription', planSlug }),
+          body: JSON.stringify({ planSlug }),
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? 'Failed to start checkout')
-        if (data.url) { window.location.href = data.url; return }
+        if (!res.ok) throw new Error(data.error ?? 'Failed to activate subscription')
+        setDone(true)
+        return
       }
 
-      // Fallback: reserve without payment
-      const res = await fetch('/api/subscribe', {
+      // Paid plan — always go through real Stripe checkout
+      const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planSlug }),
+        body: JSON.stringify({ mode: 'subscription', planSlug }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Failed to reserve subscription')
-      setDone(true)
+      if (!res.ok) throw new Error(data.error ?? 'Failed to start checkout')
+      if (data.url) { window.location.href = data.url; return }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -57,11 +60,9 @@ export function SubscribeActions({ planSlug, planName, stripeConfigured, hasPric
     return (
       <div className="text-center space-y-4">
         <div className="text-3xl text-[#C4AB77]">✦</div>
-        <h2 className="font-playfair text-xl text-[#35291C]">Subscription Reserved</h2>
+        <h2 className="font-playfair text-xl text-[#35291C]">You're Subscribed</h2>
         <p className="font-baskerville italic text-[#4B4C44] leading-relaxed">
-          Your subscription to <strong>{planName}</strong> has been reserved.
-          Payment will be taken once our payment system is fully connected.
-          You shall receive confirmation by post — or rather, by email — very shortly.
+          Your subscription to <strong>{planName}</strong> is now active.
         </p>
         <Link
           href="/account"
@@ -119,13 +120,19 @@ export function SubscribeActions({ planSlug, planName, stripeConfigured, hasPric
         You are signed in as <strong>{currentUser.email}</strong>.
       </p>
       {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-      <button
-        onClick={handleSubscribe}
-        disabled={submitting}
-        className="w-full py-3 bg-[#C4AB77] text-white text-sm font-semibold rounded hover:bg-[#7a5c12] transition-colors disabled:opacity-50"
-      >
-        {submitting ? 'Reserving your subscription…' : `Subscribe to ${planName}`}
-      </button>
+      {canCheckout ? (
+        <button
+          onClick={handleSubscribe}
+          disabled={submitting}
+          className="w-full py-3 bg-[#C4AB77] text-white text-sm font-semibold rounded hover:bg-[#7a5c12] transition-colors disabled:opacity-50"
+        >
+          {submitting ? 'Redirecting to payment…' : `Subscribe to ${planName}`}
+        </button>
+      ) : (
+        <p className="text-sm text-center text-[#7A564C] bg-[#f5efe3] border border-[#e8dcc4] rounded-lg px-4 py-3">
+          This plan isn't ready to accept subscriptions yet. Please check back shortly, or contact us.
+        </p>
+      )}
       <p className="text-xs text-center text-[#4B4C44]">
         Not you?{' '}
         <Link href={`/login?redirect=/subscribe/${planSlug}`} className="text-[#C4AB77] hover:underline">

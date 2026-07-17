@@ -31,9 +31,16 @@ interface Product {
 
 interface Props {
   product: Product | null
+  currency: string
 }
 
-export function ProductEditor({ product }: Props) {
+function currencySymbol(currency: string) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    .formatToParts(0)
+    .find((p) => p.type === 'currency')?.value ?? currency
+}
+
+export function ProductEditor({ product, currency }: Props) {
   const router = useRouter()
   const isNew = !product
 
@@ -199,7 +206,7 @@ export function ProductEditor({ product }: Props) {
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Price (£)" helpText="The selling price in pounds — e.g. 12.50.">
+          <Field label={`Price (${currencySymbol(currency)})`} helpText={`The selling price in ${currency} — e.g. 12.50.`}>
             <input
               type="number"
               min={0}
@@ -211,7 +218,7 @@ export function ProductEditor({ product }: Props) {
               className="input"
             />
           </Field>
-          <Field label="Compare-at price (£)" helpText="Original / was price shown as a strikethrough. Leave blank if not on sale.">
+          <Field label={`Compare-at price (${currencySymbol(currency)})`} helpText="Original / was price shown as a strikethrough. Leave blank if not on sale.">
             <input
               type="number"
               min={0}
@@ -283,7 +290,7 @@ export function ProductEditor({ product }: Props) {
               />
             </div>
             <div className="col-span-3">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Price (£, optional)</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Price ({currencySymbol(currency)}, optional)</label>
               <input
                 type="number"
                 min={0}

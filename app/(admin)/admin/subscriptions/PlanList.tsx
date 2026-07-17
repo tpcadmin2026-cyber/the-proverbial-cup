@@ -21,7 +21,17 @@ interface Plan {
   maxPauseDays: number
 }
 
-export function PlanList({ initialPlans }: { initialPlans: Plan[] }) {
+function formatPrice(cents: number, currency: string) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100)
+}
+
+function currencySymbol(currency: string) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    .formatToParts(0)
+    .find((p) => p.type === 'currency')?.value ?? currency
+}
+
+export function PlanList({ initialPlans, currency }: { initialPlans: Plan[]; currency: string }) {
   const [plans, setPlans] = useState<Plan[]>(initialPlans)
   const [editing, setEditing] = useState<Plan | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -111,10 +121,10 @@ export function PlanList({ initialPlans }: { initialPlans: Plan[] }) {
                   )}
                   <div className="flex items-center gap-4 mt-2 text-sm">
                     <span className="font-medium text-gray-900">
-                      {plan.priceMonthly == null ? 'Free' : `£${(plan.priceMonthly / 100).toFixed(2)}/mo`}
+                      {plan.priceMonthly == null ? 'Free' : `${formatPrice(plan.priceMonthly, currency)}/mo`}
                     </span>
                     {plan.priceYearly != null && (
-                      <span className="text-gray-400">£{(plan.priceYearly / 100).toFixed(2)}/yr</span>
+                      <span className="text-gray-400">{formatPrice(plan.priceYearly, currency)}/yr</span>
                     )}
                     {plan.trialDays > 0 && (
                       <span className="text-gray-400">{plan.trialDays}-day trial</span>
@@ -157,6 +167,7 @@ export function PlanList({ initialPlans }: { initialPlans: Plan[] }) {
             plan={formPlan}
             saving={saving}
             error={error}
+            currency={currency}
             onSave={savePlan}
             onCancel={() => { setEditing(null); setShowForm(false); setError(null) }}
           />
@@ -166,10 +177,11 @@ export function PlanList({ initialPlans }: { initialPlans: Plan[] }) {
   )
 }
 
-function PlanForm({ plan, saving, error, onSave, onCancel }: {
+function PlanForm({ plan, saving, error, currency, onSave, onCancel }: {
   plan: Plan
   saving: boolean
   error: string | null
+  currency: string
   onSave: (data: Partial<Plan> & { id?: string }) => void
   onCancel: () => void
 }) {
@@ -214,13 +226,13 @@ function PlanForm({ plan, saving, error, onSave, onCancel }: {
       </Field>
 
       <div className="grid grid-cols-3 gap-4">
-        <Field label="Monthly price (£)" helpText="In pounds. Leave blank for a free plan.">
+        <Field label={`Monthly price (${currencySymbol(currency)})`} helpText={`In ${currency}. Leave blank for a free plan.`}>
           <input type="number" min={0} step={0.01}
             value={form.priceMonthly != null ? form.priceMonthly / 100 : ''}
             onChange={(e) => f('priceMonthly', e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null)}
             className="input" placeholder="0.00" />
         </Field>
-        <Field label="Yearly price (£)" helpText="Leave blank if you don't offer yearly billing.">
+        <Field label={`Yearly price (${currencySymbol(currency)})`} helpText="Leave blank if you don't offer yearly billing.">
           <input type="number" min={0} step={0.01}
             value={form.priceYearly != null ? form.priceYearly / 100 : ''}
             onChange={(e) => f('priceYearly', e.target.value ? Math.round(parseFloat(e.target.value) * 100) : null)}

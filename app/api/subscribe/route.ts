@@ -31,12 +31,18 @@ export async function POST(req: NextRequest) {
   const plan = await db.subscriptionPlan.findUnique({ where: { slug: planSlug, visible: true } })
   if (!plan) return NextResponse.json({ error: 'Subscription plan not found.' }, { status: 404 })
 
-  // Create subscription in pending state (Stripe will confirm it later)
+  // This endpoint only handles genuinely free plans — paid plans must go through
+  // /api/stripe/checkout so payment is actually collected.
+  if (plan.priceMonthly != null) {
+    return NextResponse.json({ error: 'This plan requires payment. Please use the Stripe checkout flow.' }, { status: 400 })
+  }
+
+  // Free plan — activate immediately, nothing to wait for
   await db.userSubscription.create({
     data: {
       userId: user.id,
       planId: plan.id,
-      status: 'pending',
+      status: 'active',
       billingInterval: 'monthly',
     },
   })

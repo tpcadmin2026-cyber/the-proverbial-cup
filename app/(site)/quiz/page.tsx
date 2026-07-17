@@ -18,7 +18,7 @@ export default async function QuizPage() {
   if (!await isEnabled('quiz')) {
     return <FeatureDisabled siteName={siteName} title="Find Your Perfect Blend" message="Our recommendation quiz is coming soon. In the meantime, browse our subscription plans to find the right fit." />
   }
-  const [questions, plans, heading, subheading, resultHeading, resultSubtext] = await Promise.all([
+  const [questions, plans, heading, subheading, resultHeading, resultSubtext, currency] = await Promise.all([
     db.quizQuestion.findMany({
       where: { active: true },
       orderBy: { order: 'asc' },
@@ -32,6 +32,7 @@ export default async function QuizPage() {
     getSetting<string>('quiz.subheading',    'Answer a few brief questions and we shall recommend the finest subscription for your tastes.'),
     getSetting<string>('quiz.resultHeading', 'Our Recommendation for You'),
     getSetting<string>('quiz.resultSubtext', 'Based upon your answers, we believe the following subscription would suit you admirably.'),
+    getSetting<string>('payments.currency', 'USD'),
   ])
 
   return (
@@ -42,6 +43,7 @@ export default async function QuizPage() {
       subheading={subheading}
       resultHeading={resultHeading}
       resultSubtext={resultSubtext}
+      currency={currency}
     />
   )
 }

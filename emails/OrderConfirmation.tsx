@@ -5,7 +5,7 @@ import { EmailBase, styles } from './EmailBase'
 interface OrderItem {
   name: string
   quantity: number
-  price: string  // formatted, e.g. "£4.99"
+  price: string  // formatted, e.g. "$4.99"
 }
 
 interface OrderConfirmationProps {
