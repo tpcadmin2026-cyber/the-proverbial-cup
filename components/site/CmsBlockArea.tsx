@@ -108,12 +108,13 @@ export function StaticBlock({ block, products = [], currency = 'USD' }: { block:
       )
     }
     case 'image': {
-      const d = parseJson<{ url: string; alt: string; caption: string }>(text, { url: '', alt: '', caption: '' })
+      const d = parseJson<{ url: string; alt: string; caption: string; width: number }>(text, { url: '', alt: '', caption: '', width: 100 })
       if (!d.url) return null
+      const w = d.width ?? 100
       return (
         <figure style={{ margin: '0.75em 0', textAlign: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={d.url} alt={d.alt} style={{ maxWidth: '100%', border: '1px solid var(--ink-faded)', display: 'block', margin: '0 auto' }} />
+          <img src={d.url} alt={d.alt} style={{ width: `${w}%`, maxWidth: '100%', border: '1px solid var(--ink-faded)', display: 'block', margin: '0 auto' }} />
           {d.caption && (
             <figcaption className="body-text" style={{ fontSize: '0.75em', fontStyle: 'italic', marginTop: '4px', color: 'var(--ink-faded)' }}>
               {d.caption}
@@ -534,10 +535,11 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
   })
 
   // Image-specific fields
-  const imgData = parseJson<{ url: string; alt: string; caption: string }>(block.blockType === 'image' ? block.content : '{}', { url: '', alt: '', caption: '' })
+  const imgData = parseJson<{ url: string; alt: string; caption: string; width: number }>(block.blockType === 'image' ? block.content : '{}', { url: '', alt: '', caption: '', width: 100 })
   const [imgUrl, setImgUrl] = useState(imgData.url)
   const [imgAlt, setImgAlt] = useState(imgData.alt)
   const [imgCaption, setImgCaption] = useState(imgData.caption)
+  const [imgWidth, setImgWidth] = useState(imgData.width ?? 100)
   const [imgUploading, setImgUploading] = useState(false)
   const [imgUploadError, setImgUploadError] = useState('')
 
@@ -593,7 +595,7 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
 
   function buildContent(): string {
     switch (type) {
-      case 'image': return JSON.stringify({ url: imgUrl, alt: imgAlt, caption: imgCaption })
+      case 'image': return JSON.stringify({ url: imgUrl, alt: imgAlt, caption: imgCaption, width: imgWidth })
       case 'cta':   return JSON.stringify({ text: ctaText, url: ctaUrl, style: ctaStyle })
       case 'ornament': return ornament
       case 'spacer': return String(spacerHeight)
@@ -740,7 +742,7 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
                 {imgUrl && (
                   <div style={{ marginTop: 8, border: '1px solid #c8c4a8', borderRadius: 4, overflow: 'hidden', maxHeight: 160, textAlign: 'center', backgroundColor: '#f0ece0' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgUrl} alt="preview" style={{ maxHeight: 160, maxWidth: '100%', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                    <img src={imgUrl} alt="preview" style={{ width: `${imgWidth}%`, maxHeight: 160, maxWidth: '100%', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
                   </div>
                 )}
               </div>
@@ -751,6 +753,22 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
               <div>
                 <FieldLabel>Caption <span style={{ color: '#b8b090', fontWeight: 400 }}>(optional, shown below the image)</span></FieldLabel>
                 <input type="text" value={imgCaption} onChange={(e) => setImgCaption(e.target.value)} placeholder="The Gazette's recommended morning blend" style={inputStyle} />
+              </div>
+              <div>
+                <FieldLabel>Size <span style={{ color: '#b8b090', fontWeight: 400 }}>({imgWidth}% of column width)</span></FieldLabel>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input
+                    type="range"
+                    min={10}
+                    max={100}
+                    step={5}
+                    value={imgWidth}
+                    onChange={(e) => setImgWidth(Number(e.target.value))}
+                    style={{ flex: 1, accentColor: '#7A564C' }}
+                  />
+                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#4B4C44', width: 36, textAlign: 'right' }}>{imgWidth}%</span>
+                </div>
+                <HelpText>Shrinks the image within its column or span — it stays centered.</HelpText>
               </div>
             </>
           )}
