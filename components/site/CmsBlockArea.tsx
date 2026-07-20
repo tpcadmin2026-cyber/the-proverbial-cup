@@ -301,12 +301,12 @@ function StaticBlocks({ blocks, columnCount, products, currency }: { blocks: Edi
       {rows.map((row, ri) => (
         <div key={ri} style={{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)`, gap: '0 12px' }}>
           {row.spans.map(({ block, startCol, span }) => (
-            <div key={block.id} style={{ gridColumn: `${startCol} / span ${span}` }}>
+            <div key={block.id} style={{ gridColumn: `${startCol} / span ${span}`, gridRow: 1 }}>
               <StaticBlock block={block} products={products} currency={currency} />
             </div>
           ))}
           {row.columns.map((colBlocks, ci) => colBlocks.length > 0 && (
-            <div key={ci} style={{ gridColumn: `${ci + 1} / span 1` }}>
+            <div key={ci} style={{ gridColumn: `${ci + 1} / span 1`, gridRow: 1 }}>
               {colBlocks.map((b) => <StaticBlock key={b.id} block={b} products={products} currency={currency} />)}
             </div>
           ))}
@@ -966,8 +966,9 @@ const LAYOUT_COL_NAMES: Record<string, string[]> = {
 
 // ─── Droppable column zone ────────────────────────────────────────────────────
 
-function DroppableColumn({ dropId, colName, showLabel = true, isOver, children }: {
+function DroppableColumn({ dropId, col, colName, showLabel = true, isOver, children }: {
   dropId: string
+  col: number
   colName: string
   showLabel?: boolean
   isOver: boolean
@@ -978,6 +979,8 @@ function DroppableColumn({ dropId, colName, showLabel = true, isOver, children }
     <div
       ref={setNodeRef}
       style={{
+        gridColumn: `${col} / span 1`,
+        gridRow: 1,
         minHeight: '80px',
         borderRadius: '3px',
         outline: isOver ? '2px solid #C4AB77' : '2px solid transparent',
@@ -1235,7 +1238,7 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
         {rows.map((row, ri) => (
           <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '0 12px', marginBottom: row.spans.length > 0 ? '8px' : undefined }}>
             {row.spans.map(({ block, startCol, span }) => (
-              <div key={block.id} style={{ gridColumn: `${startCol} / span ${span}` }}>
+              <div key={block.id} style={{ gridColumn: `${startCol} / span ${span}`, gridRow: 1 }}>
                 <SortableContext items={[block.id]} strategy={verticalListSortingStrategy}>
                   <VisualSortableBlock
                     block={block}
@@ -1260,6 +1263,7 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
                 <DroppableColumn
                   key={col}
                   dropId={dropId}
+                  col={col}
                   colName={colNames[ci] ?? `Column ${col}`}
                   showLabel={ri === 0}
                   isOver={overId === dropId}
