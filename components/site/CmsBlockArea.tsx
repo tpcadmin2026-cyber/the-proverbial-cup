@@ -233,40 +233,54 @@ function getVideoEmbedUrl(url: string): string | null {
   }
 }
 
-type BlockRow =
-  | { type: 'columns'; columns: EditBlock[][] }
-  | { type: 'span'; block: EditBlock }
+interface SpanCell { block: EditBlock; startCol: number; span: number }
+interface BlockRow {
+  spans: SpanCell[]
+  columns: EditBlock[][] // length = columnCount; columns claimed by a span stay empty here
+}
 
-/** Computes the CSS grid-column value for a spanning block, clamped to fit within the layout. */
-function spanGridColumn(block: EditBlock, columnCount: number): string {
+/** Clamps a block's colSpan/column into a valid 1-indexed start column within the layout. */
+function spanStartCol(block: EditBlock, columnCount: number): { start: number; span: number } {
   const span = Math.min(Math.max(block.colSpan ?? 1, 1), columnCount)
   const maxStart = columnCount - span + 1
   const start = Math.min(Math.max(block.column ?? 1, 1), maxStart)
-  return `${start} / span ${span}`
+  return { start, span }
 }
 
-/** Groups blocks (in order) into independent-column stacks, broken by any block spanning 2+ columns. */
+/**
+ * Groups blocks (in order) into rows. Columns flow independently within a row — a
+ * spanning block shares its row with normal blocks in whichever columns it doesn't
+ * cover (e.g. a 2-column image beside a 1-column text sidebar) — and a row only ends
+ * when something would actually overlap what's already been placed in it.
+ */
 function groupBlocksIntoRows(blocks: EditBlock[], columnCount: number): BlockRow[] {
   const rows: BlockRow[] = []
-  let current: EditBlock[][] = Array.from({ length: columnCount }, () => [])
+  let current: BlockRow = { spans: [], columns: Array.from({ length: columnCount }, () => []) }
+  let spanClaimed = new Set<number>()  // columns reserved by a span in the current row
+  let normalUsed = new Set<number>()   // columns that already hold a normal block in the current row
 
   function flush() {
-    rows.push({ type: 'columns', columns: current })
-    current = Array.from({ length: columnCount }, () => [])
+    rows.push(current)
+    current = { spans: [], columns: Array.from({ length: columnCount }, () => []) }
+    spanClaimed = new Set()
+    normalUsed = new Set()
   }
 
   for (const block of blocks) {
-    const span = Math.min(Math.max(block.colSpan ?? 1, 1), columnCount)
+    const { start, span } = spanStartCol(block, columnCount)
     if (span > 1) {
-      flush()
-      rows.push({ type: 'span', block })
+      const range = Array.from({ length: span }, (_, i) => start + i)
+      if (range.some((c) => spanClaimed.has(c) || normalUsed.has(c))) flush()
+      current.spans.push({ block, startCol: start, span })
+      range.forEach((c) => spanClaimed.add(c))
     } else {
-      const col = Math.min(Math.max((block.column ?? 1) - 1, 0), columnCount - 1)
-      current[col].push(block)
+      if (spanClaimed.has(start)) flush()
+      current.columns[start - 1].push(block)
+      normalUsed.add(start)
     }
   }
-  // Always end with a columns-row (even if empty) — the static view renders an empty
-  // one as nothing, but the editor relies on it always existing as a drop target.
+  // Always end with a row (even if empty) — the static view renders an empty one as
+  // nothing, but the editor relies on it always existing as a drop target.
   flush()
   return rows
 }
@@ -277,28 +291,27 @@ function StaticBlocks({ blocks, columnCount, products, currency }: { blocks: Edi
   if (columnCount === 1) return <div>{visible.map((b) => <StaticBlock key={b.id} block={b} products={products} currency={currency} />)}</div>
 
   // Blocks with colSpan 1 keep flowing in their own independent column stack, like a
-  // newspaper. A block spanning 2+ columns breaks that flow into its own row — sized
-  // and positioned by its column/colSpan — after which each column resumes stacking
-  // independently below it.
+  // newspaper. A block spanning 2+ columns shares its row with normal blocks in
+  // whichever columns it doesn't cover (e.g. an image beside a text sidebar) — a row
+  // only breaks when something would actually overlap what's already in it.
   const rows = groupBlocksIntoRows(visible, columnCount)
 
   return (
     <div>
-      {rows.map((row, ri) =>
-        row.type === 'span' ? (
-          <div key={ri} style={{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)`, gap: '0 12px' }}>
-            <div style={{ gridColumn: spanGridColumn(row.block, columnCount) }}>
-              <StaticBlock block={row.block} products={products} currency={currency} />
+      {rows.map((row, ri) => (
+        <div key={ri} style={{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)`, gap: '0 12px' }}>
+          {row.spans.map(({ block, startCol, span }) => (
+            <div key={block.id} style={{ gridColumn: `${startCol} / span ${span}` }}>
+              <StaticBlock block={block} products={products} currency={currency} />
             </div>
-          </div>
-        ) : (
-          <div key={ri} style={{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)`, gap: '0 12px' }}>
-            {row.columns.map((colBlocks, ci) => (
-              <div key={ci}>{colBlocks.map((b) => <StaticBlock key={b.id} block={b} products={products} currency={currency} />)}</div>
-            ))}
-          </div>
-        )
-      )}
+          ))}
+          {row.columns.map((colBlocks, ci) => colBlocks.length > 0 && (
+            <div key={ci} style={{ gridColumn: `${ci + 1} / span 1` }}>
+              {colBlocks.map((b) => <StaticBlock key={b.id} block={b} products={products} currency={currency} />)}
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   )
 }
@@ -1205,10 +1218,10 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
   const activeBlock = activeId ? blocks.find((b) => b.id === activeId) : null
 
   // Same row-grouping the published page uses, so what you see while editing is
-  // exactly what you'll see once saved — a spanning block really does break out of
-  // the column flow here too, not just show a badge.
+  // exactly what you'll see once saved — a spanning block shares its row with normal
+  // blocks in the columns it doesn't cover, not just show a badge.
   const rows = groupBlocksIntoRows(blocks, columnCount)
-  const lastColumnsRowIndex = rows.map((r) => r.type).lastIndexOf('columns')
+  const lastRowIndex = rows.length - 1
 
   return (
     <>
@@ -1219,13 +1232,13 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
         onDragOver={handleDragOver as never}
         onDragEnd={handleDragEnd}
       >
-        {rows.map((row, ri) =>
-          row.type === 'span' ? (
-            <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '0 12px', marginBottom: '8px' }}>
-              <div style={{ gridColumn: spanGridColumn(row.block, columnCount) }}>
-                <SortableContext items={[row.block.id]} strategy={verticalListSortingStrategy}>
+        {rows.map((row, ri) => (
+          <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '0 12px', marginBottom: row.spans.length > 0 ? '8px' : undefined }}>
+            {row.spans.map(({ block, startCol, span }) => (
+              <div key={block.id} style={{ gridColumn: `${startCol} / span ${span}` }}>
+                <SortableContext items={[block.id]} strategy={verticalListSortingStrategy}>
                   <VisualSortableBlock
-                    block={row.block}
+                    block={block}
                     products={products}
                     currency={currency}
                     onEdit={setEditingBlock}
@@ -1237,48 +1250,47 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
                   />
                 </SortableContext>
               </div>
-            </div>
-          ) : (
-            <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '0 12px' }}>
-              {row.columns.map((colBlocks, ci) => {
-                const col = ci + 1
-                const dropId = `drop-col-${col}-${ri}`
-                return (
-                  <DroppableColumn
-                    key={col}
-                    dropId={dropId}
-                    colName={colNames[ci] ?? `Column ${col}`}
-                    showLabel={ri === 0}
-                    isOver={overId === dropId}
-                  >
-                    <SortableContext items={colBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                      {colBlocks.length === 0 && !activeId && (
-                        <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: "'Libre Baskerville', serif", color: 'rgba(139,105,20,0.5)', fontStyle: 'italic', fontSize: '12px', borderRadius: '2px', border: '1px dashed rgba(139,105,20,0.3)' }}>
-                          Drop blocks here
-                        </div>
-                      )}
-                      {colBlocks.map((block) => (
-                        <VisualSortableBlock
-                          key={block.id}
-                          block={block}
-                          products={products}
-                          currency={currency}
-                          onEdit={setEditingBlock}
-                          onDelete={handleDelete}
-                          onDuplicate={handleDuplicate}
-                          onToggleVisible={(id) =>
-                            ctx.setPageBlocks(pageId, blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b))
-                          }
-                        />
-                      ))}
-                    </SortableContext>
-                    {ri === lastColumnsRowIndex && <AddBlockButton onAdd={(type) => handleAdd(type, col)} />}
-                  </DroppableColumn>
-                )
-              })}
-            </div>
-          )
-        )}
+            ))}
+            {row.columns.map((colBlocks, ci) => {
+              const col = ci + 1
+              const spanClaimed = row.spans.some((s) => col >= s.startCol && col < s.startCol + s.span)
+              if (spanClaimed) return null
+              const dropId = `drop-col-${col}-${ri}`
+              return (
+                <DroppableColumn
+                  key={col}
+                  dropId={dropId}
+                  colName={colNames[ci] ?? `Column ${col}`}
+                  showLabel={ri === 0}
+                  isOver={overId === dropId}
+                >
+                  <SortableContext items={colBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                    {colBlocks.length === 0 && !activeId && (
+                      <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: "'Libre Baskerville', serif", color: 'rgba(139,105,20,0.5)', fontStyle: 'italic', fontSize: '12px', borderRadius: '2px', border: '1px dashed rgba(139,105,20,0.3)' }}>
+                        Drop blocks here
+                      </div>
+                    )}
+                    {colBlocks.map((block) => (
+                      <VisualSortableBlock
+                        key={block.id}
+                        block={block}
+                        products={products}
+                        currency={currency}
+                        onEdit={setEditingBlock}
+                        onDelete={handleDelete}
+                        onDuplicate={handleDuplicate}
+                        onToggleVisible={(id) =>
+                          ctx.setPageBlocks(pageId, blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b))
+                        }
+                      />
+                    ))}
+                  </SortableContext>
+                  {ri === lastRowIndex && <AddBlockButton onAdd={(type) => handleAdd(type, col)} />}
+                </DroppableColumn>
+              )
+            })}
+          </div>
+        ))}
 
         {/* Drag overlay — shows block content while dragging */}
         <DragOverlay>
