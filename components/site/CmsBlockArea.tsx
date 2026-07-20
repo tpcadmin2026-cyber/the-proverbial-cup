@@ -108,18 +108,39 @@ export function StaticBlock({ block, products = [], currency = 'USD' }: { block:
       )
     }
     case 'image': {
-      const d = parseJson<{ url: string; alt: string; caption: string; width: number }>(text, { url: '', alt: '', caption: '', width: 100 })
+      const d = parseJson<{ url: string; alt: string; caption: string; width: number; fit: string }>(text, { url: '', alt: '', caption: '', width: 100, fit: 'fit' })
       if (!d.url) return null
       const w = d.width ?? 100
+      const fit = d.fit ?? 'fit'
+      const caption = d.caption && (
+        <figcaption className="body-text" style={{ fontSize: '0.75em', fontStyle: 'italic', marginTop: '4px', color: 'var(--ink-faded)', flexShrink: 0 }}>
+          {d.caption}
+        </figcaption>
+      )
+      if (fit === 'fit') {
+        return (
+          <figure style={{ margin: '0.75em 0', textAlign: 'center' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={d.url} alt={d.alt} style={{ width: `${w}%`, maxWidth: '100%', border: '1px solid var(--ink-faded)', display: 'block', margin: '0 auto' }} />
+            {caption}
+          </figure>
+        )
+      }
+      // "fill"/"stretch" — the image expands to fill the block's full height, leaving no gap
+      // around it. Works best when the image is the only block in its column/span.
       return (
-        <figure style={{ margin: '0.75em 0', textAlign: 'center' }}>
+        <figure style={{ margin: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={d.url} alt={d.alt} style={{ width: `${w}%`, maxWidth: '100%', border: '1px solid var(--ink-faded)', display: 'block', margin: '0 auto' }} />
-          {d.caption && (
-            <figcaption className="body-text" style={{ fontSize: '0.75em', fontStyle: 'italic', marginTop: '4px', color: 'var(--ink-faded)' }}>
-              {d.caption}
-            </figcaption>
-          )}
+          <img
+            src={d.url}
+            alt={d.alt}
+            style={{
+              width: '100%', flex: '1 1 auto', minHeight: 0,
+              objectFit: fit === 'stretch' ? 'fill' : 'cover',
+              border: '1px solid var(--ink-faded)', display: 'block',
+            }}
+          />
+          {caption}
         </figure>
       )
     }
@@ -535,11 +556,12 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
   })
 
   // Image-specific fields
-  const imgData = parseJson<{ url: string; alt: string; caption: string; width: number }>(block.blockType === 'image' ? block.content : '{}', { url: '', alt: '', caption: '', width: 100 })
+  const imgData = parseJson<{ url: string; alt: string; caption: string; width: number; fit: string }>(block.blockType === 'image' ? block.content : '{}', { url: '', alt: '', caption: '', width: 100, fit: 'fit' })
   const [imgUrl, setImgUrl] = useState(imgData.url)
   const [imgAlt, setImgAlt] = useState(imgData.alt)
   const [imgCaption, setImgCaption] = useState(imgData.caption)
   const [imgWidth, setImgWidth] = useState(imgData.width ?? 100)
+  const [imgFit, setImgFit] = useState(imgData.fit ?? 'fit')
   const [imgUploading, setImgUploading] = useState(false)
   const [imgUploadError, setImgUploadError] = useState('')
 
@@ -595,7 +617,7 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
 
   function buildContent(): string {
     switch (type) {
-      case 'image': return JSON.stringify({ url: imgUrl, alt: imgAlt, caption: imgCaption, width: imgWidth })
+      case 'image': return JSON.stringify({ url: imgUrl, alt: imgAlt, caption: imgCaption, width: imgWidth, fit: imgFit })
       case 'cta':   return JSON.stringify({ text: ctaText, url: ctaUrl, style: ctaStyle })
       case 'ornament': return ornament
       case 'spacer': return String(spacerHeight)
@@ -740,9 +762,18 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
                 {imgUploadError && <p style={{ color: '#c0392b', fontSize: 11, marginBottom: 4, fontFamily: 'Inter, sans-serif' }}>{imgUploadError}</p>}
                 <input type="url" value={imgUrl} onChange={(e) => setImgUrl(e.target.value)} placeholder="https://example.com/image.jpg" style={inputStyle} />
                 {imgUrl && (
-                  <div style={{ marginTop: 8, border: '1px solid #c8c4a8', borderRadius: 4, overflow: 'hidden', maxHeight: 160, textAlign: 'center', backgroundColor: '#f0ece0' }}>
+                  <div style={{ marginTop: 8, height: 160, border: '1px solid #c8c4a8', borderRadius: 4, overflow: 'hidden', textAlign: 'center', backgroundColor: '#f0ece0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgUrl} alt="preview" style={{ width: `${imgWidth}%`, maxHeight: 160, maxWidth: '100%', objectFit: 'contain' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                    <img
+                      src={imgUrl}
+                      alt="preview"
+                      style={
+                        imgFit === 'fit'
+                          ? { width: `${imgWidth}%`, maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }
+                          : { width: '100%', height: '100%', objectFit: imgFit === 'stretch' ? 'fill' : 'cover' }
+                      }
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                    />
                   </div>
                 )}
               </div>
@@ -755,21 +786,35 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
                 <input type="text" value={imgCaption} onChange={(e) => setImgCaption(e.target.value)} placeholder="The Gazette's recommended morning blend" style={inputStyle} />
               </div>
               <div>
-                <FieldLabel>Size <span style={{ color: '#b8b090', fontWeight: 400 }}>({imgWidth}% of column width)</span></FieldLabel>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <input
-                    type="range"
-                    min={10}
-                    max={100}
-                    step={5}
-                    value={imgWidth}
-                    onChange={(e) => setImgWidth(Number(e.target.value))}
-                    style={{ flex: 1, accentColor: '#7A564C' }}
-                  />
-                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#4B4C44', width: 36, textAlign: 'right' }}>{imgWidth}%</span>
-                </div>
-                <HelpText>Shrinks the image within its column or span — it stays centered.</HelpText>
+                <FieldLabel>Fit</FieldLabel>
+                <select value={imgFit} onChange={(e) => setImgFit(e.target.value)} style={selectStyle}>
+                  <option value="fit">Fit — scale down, no cropping (may leave space around it)</option>
+                  <option value="cover">Fill — crop to fill the block completely, no gaps</option>
+                  <option value="stretch">Stretch — fill exactly, may distort the image</option>
+                </select>
+                <HelpText>
+                  {imgFit === 'fit'
+                    ? 'Shrinks the image within its column or span — it stays centered.'
+                    : 'Expands the image to fill its column or span with no empty space. Works best when this image is the only block there.'}
+                </HelpText>
               </div>
+              {imgFit === 'fit' && (
+                <div>
+                  <FieldLabel>Size <span style={{ color: '#b8b090', fontWeight: 400 }}>({imgWidth}% of column width)</span></FieldLabel>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input
+                      type="range"
+                      min={10}
+                      max={100}
+                      step={5}
+                      value={imgWidth}
+                      onChange={(e) => setImgWidth(Number(e.target.value))}
+                      style={{ flex: 1, accentColor: '#7A564C' }}
+                    />
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#4B4C44', width: 36, textAlign: 'right' }}>{imgWidth}%</span>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -1037,6 +1082,7 @@ function VisualSortableBlock({ block, products, currency, onEdit, onDelete, onDu
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
   const [hovered, setHovered] = useState(false)
   const typeDef = BLOCK_TYPES.find((t) => t.value === block.blockType)
+  const isFillImage = block.blockType === 'image' && (parseJson<{ fit?: string }>(block.content, {}).fit ?? 'fit') !== 'fit'
 
   return (
     <div
@@ -1048,6 +1094,7 @@ function VisualSortableBlock({ block, products, currency, onEdit, onDelete, onDu
         transition,
         opacity: isDragging ? 0 : block.visible ? 1 : 0.35,
         position: 'relative',
+        height: isFillImage ? '100%' : undefined,
         marginBottom: '2px',
         borderRadius: '2px',
         paddingTop: (block.colSpan ?? 1) > 1 ? '20px' : undefined,
