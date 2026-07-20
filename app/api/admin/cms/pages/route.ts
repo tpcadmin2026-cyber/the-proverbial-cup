@@ -26,10 +26,11 @@ export async function POST(req: NextRequest) {
         published: published ?? false,
         showInNav: showInNav ?? true,
         blocks: {
-          create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; visible?: boolean; blockOrder: number }) => ({
+          create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; colSpan?: number; visible?: boolean; blockOrder: number }) => ({
             blockType: b.blockType,
             content: b.content ?? null,
             column: b.column ?? 1,
+            colSpan: b.colSpan ?? 1,
             visible: b.visible ?? true,
             blockOrder: b.blockOrder,
           })),

@@ -40,6 +40,7 @@ interface BlockDraft {
   blockType: string
   content: string
   column: number
+  colSpan: number
   visible: boolean
   blockOrder: number
 }
@@ -67,6 +68,7 @@ export function CmsPageEditor({ page, blocks: initialBlocks, defaultOrder }: Pro
       blockType: b.blockType,
       content: b.content ?? '',
       column: b.column ?? 1,
+      colSpan: b.colSpan ?? 1,
       visible: b.visible,
       blockOrder: b.blockOrder,
     }))
@@ -104,7 +106,7 @@ export function CmsPageEditor({ page, blocks: initialBlocks, defaultOrder }: Pro
     setBlocks(prev => {
       const colBlocks = prev.filter(b => b.column === col)
       const maxOrder = colBlocks.length > 0 ? Math.max(...colBlocks.map(b => b.blockOrder)) : 0
-      return [...prev, { blockType: type, content: '', column: col, visible: true, blockOrder: maxOrder + 1 }]
+      return [...prev, { blockType: type, content: '', column: col, colSpan: 1, visible: true, blockOrder: maxOrder + 1 }]
     })
   }
 

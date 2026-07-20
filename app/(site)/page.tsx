@@ -47,23 +47,32 @@ export default async function SitePage() {
     }
   }
 
-  // Load nav items and pages in parallel
-  const [pages, navItems] = await Promise.all([db.cmsPage.findMany({
-    where: { published: true },
-    orderBy: { pageOrder: 'asc' },
-    include: {
-      blocks: {
-        ...(isAdmin ? {} : { where: { visible: true } }),
-        orderBy: { blockOrder: 'asc' },
+  // Load nav items, pages, and the product catalogue (for "featured products" blocks) in parallel
+  const [pages, navItems, products] = await Promise.all([
+    db.cmsPage.findMany({
+      where: { published: true },
+      orderBy: { pageOrder: 'asc' },
+      include: {
+        blocks: {
+          ...(isAdmin ? {} : { where: { visible: true } }),
+          orderBy: { blockOrder: 'asc' },
+        },
       },
-    },
-  }), db.navItem.findMany({ where: { visible: true }, orderBy: { navOrder: 'asc' } })])
+    }),
+    db.navItem.findMany({ where: { visible: true }, orderBy: { navOrder: 'asc' } }),
+    db.product.findMany({
+      where: { visible: true },
+      orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }],
+      select: { id: true, slug: true, name: true, priceInCents: true },
+    }),
+  ])
 
   // Load design + masthead settings
   const [
     siteName, mastheadTitle,
     taglineLeft, taglineCenter, taglineRight,
     motto, editionDate, volume, issueNumber, editionLabel, establishedBy,
+    currency,
   ] = await Promise.all([
     getSetting<string>('site.name',              'The Victorian Illustrated Gazette'),
     getSetting<string>('design.mastheadTitle',   'The Victorian Illustrated Gazette'),
@@ -76,6 +85,7 @@ export default async function SitePage() {
     getSetting<string>('masthead.issueNumber',   '841'),
     getSetting<string>('masthead.editionLabel',  'LONDON MORNING EDITION'),
     getSetting<string>('masthead.establishedBy', 'Established by Royal Charter'),
+    getSetting<string>('payments.currency',      'USD'),
   ])
 
   const template = (
@@ -85,6 +95,8 @@ export default async function SitePage() {
       siteName={siteName}
       mastheadTitle={mastheadTitle}
       masthead={{ taglineLeft, taglineCenter, taglineRight, motto, editionDate, volume, issueNumber, editionLabel, establishedBy }}
+      products={products}
+      currency={currency}
     />
   )
 
@@ -100,6 +112,7 @@ export default async function SitePage() {
         blockType: b.blockType,
         content: b.content ?? '',
         column: b.column ?? 1,
+        colSpan: b.colSpan ?? 1,
         visible: b.visible,
         blockOrder: b.blockOrder,
       })),

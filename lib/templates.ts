@@ -22,7 +22,7 @@ export interface TemplateData {
     columnRatios: string | null; sectionLabel: string | null; footerLeft: string | null
     footerCenter: string | null; footerRight: string | null; published: boolean
     seoTitle: string | null; seoDescription: string | null
-    blocks: Array<{ blockType: string; content: string | null; blockOrder: number; visible: boolean; column: number | null }>
+    blocks: Array<{ blockType: string; content: string | null; blockOrder: number; visible: boolean; column: number | null; colSpan: number }>
   }>
   subscriptionPlans: Array<{
     slug: string; name: string; description: string | null; priceMonthly: number | null
@@ -91,8 +91,8 @@ export async function exportTemplate(): Promise<TemplateData> {
     cmsPages: cmsPages.map(({ slug, tabLabel, tabNumeral, pageOrder, layout, columnRatios, sectionLabel, footerLeft, footerCenter, footerRight, published, seoTitle, seoDescription, blocks }) => ({
       slug, tabLabel, tabNumeral, pageOrder, layout, columnRatios, sectionLabel,
       footerLeft, footerCenter, footerRight, published, seoTitle, seoDescription,
-      blocks: blocks.map(({ blockType, content, blockOrder, visible, column }) => ({
-        blockType, content, blockOrder, visible, column,
+      blocks: blocks.map(({ blockType, content, blockOrder, visible, column, colSpan }) => ({
+        blockType, content, blockOrder, visible, column, colSpan,
       })),
     })),
     subscriptionPlans: subscriptionPlans.map(({ slug, name, description, priceMonthly, priceYearly, trialDays, features, highlightFeature, isHighlighted, highlightLabel, visible, displayOrder, maxPauseDays, stripePriceIdMonthly, stripePriceIdYearly }) => ({

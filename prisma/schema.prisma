@@ -173,6 +173,7 @@ model ContentBlock {
   blockOrder Int
   visible    Boolean  @default(true)
   column     Int?     // Which column (1, 2, 3) for multi-column layouts
+  colSpan    Int      @default(1) // How many columns this block spans, starting at `column`
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

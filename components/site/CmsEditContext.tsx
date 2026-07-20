@@ -7,6 +7,7 @@ export interface EditBlock {
   blockType: string
   content: string
   column: number
+  colSpan: number
   visible: boolean
   blockOrder: number
 }

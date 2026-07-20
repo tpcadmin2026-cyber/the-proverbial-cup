@@ -170,6 +170,7 @@ export function CmsEditProvider({ children, pages }: Props) {
             blockType: b.blockType,
             content: b.content,
             column: b.column,
+            colSpan: b.colSpan,
             visible: b.visible,
             blockOrder: i + 1,
           })),

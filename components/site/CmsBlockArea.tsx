@@ -13,6 +13,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { CmsEditContext, type EditBlock } from './CmsEditContext'
+import { RichTextEditor } from './RichTextEditor'
+import { RichText } from '@/lib/richText'
 
 // ─── Block type definitions ──────────────────────────────────────────────────
 
@@ -22,7 +24,7 @@ export const BLOCK_TYPES = [
   { value: 'subheadline',  group: 'Text',       label: 'Subheadline',     description: 'Smaller secondary title', icon: 'h' },
   { value: 'byline',       group: 'Text',       label: 'Byline',          description: 'Author credit — "By Our Correspondent"', icon: '✒' },
   { value: 'dateline',     group: 'Text',       label: 'Dateline',        description: 'Location and date — "LONDON, Thursday"', icon: '📍' },
-  { value: 'body',         group: 'Text',       label: 'Body text',       description: 'Article paragraphs. Supports **bold**, *italic*, - lists', icon: '¶' },
+  { value: 'body',         group: 'Text',       label: 'Body text',       description: 'Article paragraphs, formatted with the rich text toolbar', icon: '¶' },
   { value: 'pullquote',    group: 'Text',       label: 'Pull quote',      description: 'Highlighted quote or excerpt', icon: '"' },
   { value: 'advertisement',group: 'Text',       label: 'Advertisement',   description: 'Victorian-styled advertisement block', icon: '📢' },
   { value: 'cta',          group: 'Text',       label: 'Call to action',  description: 'Button linking to a page or URL', icon: '→' },
@@ -31,6 +33,8 @@ export const BLOCK_TYPES = [
   { value: 'video',        group: 'Media',      label: 'Video embed',     description: 'Embed a YouTube or Vimeo video', icon: '▶' },
   // Data
   { value: 'table',        group: 'Data',       label: 'Table',           description: 'Data table with header row', icon: '⊞' },
+  // Commerce
+  { value: 'featured_products', group: 'Commerce', label: 'Featured products', description: 'Promote up to 6 products from your shop in a row — pair with "Span" for full width', icon: '⊡' },
   // Layout
   { value: 'section_label',group: 'Layout',     label: 'Section label',   description: 'Bold section heading with decorative rule', icon: '§' },
   { value: 'rule',         group: 'Layout',     label: 'Rule / divider',  description: 'Ornamental horizontal dividing rule', icon: '—' },
@@ -42,48 +46,28 @@ export const BLOCK_TYPES = [
 
 export type BlockType = typeof BLOCK_TYPES[number]['value']
 
+export interface ProductSummary {
+  id: string
+  slug: string
+  name: string
+  priceInCents: number
+}
+
 const ORNAMENT_PRESETS = [
   '❧ ✦ ❧', '⸻ ✦ ⸻', '✦ ✦ ✦', '❦', '☙ ❧', '◈', '⁂', '✤', '❊', '⁕ ⁕ ⁕',
 ]
-
-// ─── Inline HTML helper ──────────────────────────────────────────────────────
-
-function inlineHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" style="color:var(--link-color,#7A564C);text-decoration:underline">$1</a>')
-}
-
-function renderBodyParagraphs(text: string) {
-  return text.split(/\n\n+/).map((para, i) => {
-    const lines = para.split('\n').filter(Boolean)
-    if (lines.every((l) => /^[-*•]\s/.test(l))) {
-      return (
-        <ul key={i} style={{ paddingLeft: '1.2em', margin: '0.4em 0', listStyleType: 'disc' }}>
-          {lines.map((l, j) => <li key={j} dangerouslySetInnerHTML={{ __html: inlineHtml(l.replace(/^[-*•]\s+/, '')) }} />)}
-        </ul>
-      )
-    }
-    if (lines.every((l) => /^\d+\.\s/.test(l))) {
-      return (
-        <ol key={i} style={{ paddingLeft: '1.2em', margin: '0.4em 0' }}>
-          {lines.map((l, j) => <li key={j} dangerouslySetInnerHTML={{ __html: inlineHtml(l.replace(/^\d+\.\s+/, '')) }} />)}
-        </ol>
-      )
-    }
-    return <p key={i} style={{ margin: '0.4em 0' }} dangerouslySetInnerHTML={{ __html: inlineHtml(para) }} />
-  })
-}
 
 function parseJson<T>(str: string, fallback: T): T {
   try { return JSON.parse(str) as T } catch { return fallback }
 }
 
+function formatPrice(cents: number, currency: string) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
+}
+
 // ─── Static block renderer ───────────────────────────────────────────────────
 
-export function StaticBlock({ block }: { block: EditBlock }) {
+export function StaticBlock({ block, products = [], currency = 'USD' }: { block: EditBlock; products?: ProductSummary[]; currency?: string }) {
   const text = block.content ?? ''
   switch (block.blockType as BlockType) {
     case 'headline':
@@ -95,9 +79,9 @@ export function StaticBlock({ block }: { block: EditBlock }) {
     case 'dateline':
       return <div className="body-text" style={{ marginBottom: '0.4em', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.8em', fontWeight: 'bold' }}>{text}</div>
     case 'body':
-      return <div className="body-text" style={{ marginBottom: '0.75em' }}>{renderBodyParagraphs(text)}</div>
+      return <RichText as="div" className="body-text" style={{ marginBottom: '0.75em' }} content={text} />
     case 'pullquote':
-      return <blockquote className="pull-quote" style={{ margin: '0.75em 0' }}>{text}</blockquote>
+      return <RichText as="blockquote" className="pull-quote" style={{ margin: '0.75em 0' }} content={text} />
     case 'advertisement':
       return (
         <div className="ad-block" style={{ margin: '0.75em 0', textAlign: 'center', border: '1px solid var(--ink-faded)', padding: '8px', fontStyle: 'italic' }}>
@@ -150,6 +134,35 @@ export function StaticBlock({ block }: { block: EditBlock }) {
       return (
         <div style={{ margin: '0.75em 0', position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', border: '1px solid var(--ink-faded)' }}>
           <iframe src={embedUrl} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Video" />
+        </div>
+      )
+    }
+    case 'featured_products': {
+      const d = parseJson<{ heading: string; productIds: string[] }>(text, { heading: '', productIds: [] })
+      const items = d.productIds
+        .map((id) => products.find((p) => p.id === id))
+        .filter((p): p is ProductSummary => !!p)
+      if (items.length === 0) return null
+      return (
+        <div style={{ margin: '0.75em 0' }}>
+          {d.heading && <div className="section-label" style={{ marginBottom: '8px' }}>{d.heading}</div>}
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, 1fr)`, gap: '10px' }}>
+            {items.map((p) => (
+              <a
+                key={p.id}
+                href={`/shop/${p.slug}`}
+                style={{
+                  display: 'block', textAlign: 'center', textDecoration: 'none', color: 'inherit',
+                  border: '1px solid var(--ink-faded)', borderRadius: '2px', padding: '10px 4px',
+                  backgroundColor: 'rgba(255,255,255,0.4)',
+                }}
+              >
+                <div style={{ fontSize: '1.6em', lineHeight: 1 }}>☕</div>
+                <div className="body-text" style={{ fontSize: '0.68em', fontWeight: 'bold', margin: '6px 0 2px', lineHeight: 1.25 }}>{p.name}</div>
+                <div style={{ fontSize: '0.65em', color: 'var(--red)' }}>{formatPrice(p.priceInCents, currency)}</div>
+              </a>
+            ))}
+          </div>
         </div>
       )
     }
@@ -220,20 +233,72 @@ function getVideoEmbedUrl(url: string): string | null {
   }
 }
 
-function StaticBlocks({ blocks, columnCount }: { blocks: EditBlock[]; columnCount: number }) {
+type BlockRow =
+  | { type: 'columns'; columns: EditBlock[][] }
+  | { type: 'span'; block: EditBlock }
+
+/** Computes the CSS grid-column value for a spanning block, clamped to fit within the layout. */
+function spanGridColumn(block: EditBlock, columnCount: number): string {
+  const span = Math.min(Math.max(block.colSpan ?? 1, 1), columnCount)
+  const maxStart = columnCount - span + 1
+  const start = Math.min(Math.max(block.column ?? 1, 1), maxStart)
+  return `${start} / span ${span}`
+}
+
+/** Groups blocks (in order) into independent-column stacks, broken by any block spanning 2+ columns. */
+function groupBlocksIntoRows(blocks: EditBlock[], columnCount: number): BlockRow[] {
+  const rows: BlockRow[] = []
+  let current: EditBlock[][] = Array.from({ length: columnCount }, () => [])
+
+  function flush() {
+    rows.push({ type: 'columns', columns: current })
+    current = Array.from({ length: columnCount }, () => [])
+  }
+
+  for (const block of blocks) {
+    const span = Math.min(Math.max(block.colSpan ?? 1, 1), columnCount)
+    if (span > 1) {
+      flush()
+      rows.push({ type: 'span', block })
+    } else {
+      const col = Math.min(Math.max((block.column ?? 1) - 1, 0), columnCount - 1)
+      current[col].push(block)
+    }
+  }
+  // Always end with a columns-row (even if empty) — the static view renders an empty
+  // one as nothing, but the editor relies on it always existing as a drop target.
+  flush()
+  return rows
+}
+
+function StaticBlocks({ blocks, columnCount, products, currency }: { blocks: EditBlock[]; columnCount: number; products: ProductSummary[]; currency: string }) {
   const visible = blocks.filter((b) => b.visible)
   if (visible.length === 0) return null
-  if (columnCount === 1) return <div>{visible.map((b) => <StaticBlock key={b.id} block={b} />)}</div>
-  const columns: EditBlock[][] = Array.from({ length: columnCount }, () => [])
-  for (const block of visible) {
-    const col = Math.min(Math.max((block.column ?? 1) - 1, 0), columnCount - 1)
-    columns[col].push(block)
-  }
+  if (columnCount === 1) return <div>{visible.map((b) => <StaticBlock key={b.id} block={b} products={products} currency={currency} />)}</div>
+
+  // Blocks with colSpan 1 keep flowing in their own independent column stack, like a
+  // newspaper. A block spanning 2+ columns breaks that flow into its own row — sized
+  // and positioned by its column/colSpan — after which each column resumes stacking
+  // independently below it.
+  const rows = groupBlocksIntoRows(visible, columnCount)
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)`, gap: '0 12px' }}>
-      {columns.map((colBlocks, ci) => (
-        <div key={ci}>{colBlocks.map((b) => <StaticBlock key={b.id} block={b} />)}</div>
-      ))}
+    <div>
+      {rows.map((row, ri) =>
+        row.type === 'span' ? (
+          <div key={ri} style={{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)`, gap: '0 12px' }}>
+            <div style={{ gridColumn: spanGridColumn(row.block, columnCount) }}>
+              <StaticBlock block={row.block} products={products} currency={currency} />
+            </div>
+          </div>
+        ) : (
+          <div key={ri} style={{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)`, gap: '0 12px' }}>
+            {row.columns.map((colBlocks, ci) => (
+              <div key={ci}>{colBlocks.map((b) => <StaticBlock key={b.id} block={b} products={products} currency={currency} />)}</div>
+            ))}
+          </div>
+        )
+      )}
     </div>
   )
 }
@@ -434,14 +499,19 @@ function TableEditor({ value, onChange }: { value: string; onChange: (v: string)
 
 // ─── Block edit modal ────────────────────────────────────────────────────────
 
-function BlockEditModal({ block, onSave, onClose, columnCount }: {
+const MAX_FEATURED_PRODUCTS = 6
+
+function BlockEditModal({ block, onSave, onClose, columnCount, products, currency }: {
   block: EditBlock
   onSave: (updated: EditBlock) => void
   onClose: () => void
   columnCount: number
+  products: ProductSummary[]
+  currency: string
 }) {
   const [type, setType] = useState<string>(block.blockType)
   const [column, setColumn] = useState(block.column)
+  const [colSpan, setColSpan] = useState(block.colSpan ?? 1)
 
   // Simple text content
   const [text, setText] = useState(() => {
@@ -495,8 +565,18 @@ function BlockEditModal({ block, onSave, onClose, columnCount }: {
   // Spacer height
   const [spacerHeight, setSpacerHeight] = useState(block.blockType === 'spacer' ? (parseInt(block.content) || 24) : 24)
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  useEffect(() => { if (!['image', 'cta', 'rule', 'ornament', 'spacer'].includes(type)) textareaRef.current?.focus() }, [type])
+  // Featured products fields
+  const fpData = parseJson<{ heading: string; productIds: string[] }>(block.blockType === 'featured_products' ? block.content : '{}', { heading: 'Featured Products', productIds: [] })
+  const [fpHeading, setFpHeading] = useState(fpData.heading)
+  const [fpProductIds, setFpProductIds] = useState<string[]>(fpData.productIds)
+
+  function toggleFeaturedProduct(id: string) {
+    setFpProductIds((prev) => {
+      if (prev.includes(id)) return prev.filter((p) => p !== id)
+      if (prev.length >= MAX_FEATURED_PRODUCTS) return prev
+      return [...prev, id]
+    })
+  }
 
   function buildContent(): string {
     switch (type) {
@@ -504,12 +584,13 @@ function BlockEditModal({ block, onSave, onClose, columnCount }: {
       case 'cta':   return JSON.stringify({ text: ctaText, url: ctaUrl, style: ctaStyle })
       case 'ornament': return ornament
       case 'spacer': return String(spacerHeight)
+      case 'featured_products': return JSON.stringify({ heading: fpHeading, productIds: fpProductIds })
       default: return text
     }
   }
 
   function handleSave() {
-    onSave({ ...block, blockType: type, content: buildContent(), column })
+    onSave({ ...block, blockType: type, content: buildContent(), column, colSpan })
     onClose()
   }
 
@@ -561,12 +642,28 @@ function BlockEditModal({ block, onSave, onClose, columnCount }: {
                 </select>
               </div>
             )}
+            {columnCount > 1 && !['rule', 'spacer'].includes(type) && (
+              <div style={{ width: '110px' }}>
+                <FieldLabel>Span</FieldLabel>
+                <select value={colSpan} onChange={(e) => setColSpan(Number(e.target.value))} style={selectStyle}>
+                  {Array.from({ length: columnCount }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>{n === 1 ? 'Normal' : `${n} columns`}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Type description */}
           {typeDef?.description && (
             <p style={{ margin: 0, fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#C4AB77', fontStyle: 'italic' }}>
               {typeDef.description}
+            </p>
+          )}
+
+          {colSpan > 1 && (
+            <p style={{ margin: 0, fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#7A564C', backgroundColor: '#f5efe3', border: '1px solid #e8dcc4', borderRadius: '4px', padding: '6px 10px' }}>
+              This block will break out of column {column}'s flow and span {colSpan} columns wide. Columns resume stacking independently below it.
             </p>
           )}
 
@@ -589,22 +686,14 @@ function BlockEditModal({ block, onSave, onClose, columnCount }: {
           {/* ── BODY TEXT ── */}
           {type === 'body' && (
             <div>
-              <FieldLabel>
-                Body text
-                <span style={{ marginLeft: 6, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#C4AB77' }}>
-                  — **bold** · *italic* · - bullet · 1. numbered · blank line = new paragraph
-                </span>
-              </FieldLabel>
-              <textarea
-                ref={textareaRef}
+              <FieldLabel>Body text</FieldLabel>
+              <RichTextEditor
                 value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Escape') onClose(); if (e.key === 'Enter' && e.metaKey) handleSave() }}
-                rows={10}
-                placeholder="Write your article text here…&#10;&#10;Use a blank line to start a new paragraph.&#10;Use **bold** or *italic* for emphasis."
-                style={{ ...textareaStyle, fontFamily: "'Libre Baskerville', serif", fontSize: '13px', lineHeight: 1.7 }}
+                onChange={setText}
+                placeholder="Write your article text here…"
+                minHeight={200}
               />
-              <HelpText>��+Enter to save · Escape to cancel</HelpText>
+              <HelpText>Formatting is applied with the toolbar above.</HelpText>
             </div>
           )}
 
@@ -612,14 +701,11 @@ function BlockEditModal({ block, onSave, onClose, columnCount }: {
           {type === 'pullquote' && (
             <div>
               <FieldLabel>Quote text</FieldLabel>
-              <textarea
+              <RichTextEditor
                 value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Escape') onClose(); if (e.key === 'Enter' && e.metaKey) handleSave() }}
-                rows={4}
-                autoFocus
+                onChange={setText}
                 placeholder="A memorable quote or excerpt from the article…"
-                style={{ ...textareaStyle, fontFamily: "'Libre Baskerville', serif", fontStyle: 'italic', fontSize: '14px' }}
+                minHeight={80}
               />
             </div>
           )}
@@ -731,6 +817,58 @@ function BlockEditModal({ block, onSave, onClose, columnCount }: {
           {/* ── TABLE ── */}
           {type === 'table' && <TableEditor value={text} onChange={setText} />}
 
+          {/* ── FEATURED PRODUCTS ── */}
+          {type === 'featured_products' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <FieldLabel>Heading</FieldLabel>
+                <input
+                  type="text"
+                  value={fpHeading}
+                  onChange={(e) => setFpHeading(e.target.value)}
+                  placeholder="Featured Products"
+                  style={inputStyle}
+                />
+                <HelpText>Shown above the products. Leave blank to hide.</HelpText>
+              </div>
+              <div>
+                <FieldLabel>
+                  Products
+                  <span style={{ marginLeft: 6, fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#C4AB77' }}>
+                    — {fpProductIds.length} of {MAX_FEATURED_PRODUCTS} selected
+                  </span>
+                </FieldLabel>
+                {products.length === 0 ? (
+                  <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#7A564C', margin: 0 }}>
+                    No products in your shop yet. Add some under Store → Products first.
+                  </p>
+                ) : (
+                  <div style={{ border: '1px solid #c8c4a8', borderRadius: '5px', maxHeight: '220px', overflowY: 'auto', backgroundColor: 'white' }}>
+                    {products.map((p) => {
+                      const checked = fpProductIds.includes(p.id)
+                      const disabled = !checked && fpProductIds.length >= MAX_FEATURED_PRODUCTS
+                      return (
+                        <label
+                          key={p.id}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px',
+                            borderBottom: '1px solid #f0ede0', cursor: disabled ? 'not-allowed' : 'pointer',
+                            opacity: disabled ? 0.45 : 1, fontFamily: 'Inter, sans-serif', fontSize: '12px',
+                          }}
+                        >
+                          <input type="checkbox" checked={checked} disabled={disabled} onChange={() => toggleFeaturedProduct(p.id)} />
+                          <span style={{ flex: 1, color: '#35291C' }}>{p.name}</span>
+                          <span style={{ color: '#7A564C' }}>{formatPrice(p.priceInCents, currency)}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+                <HelpText>Pick 5–6 for a full-width row. Combine with the "Span" setting above so they stretch across the page.</HelpText>
+              </div>
+            </div>
+          )}
+
           {/* ── HTML ── */}
           {type === 'html' && (
             <div>
@@ -815,13 +953,14 @@ const LAYOUT_COL_NAMES: Record<string, string[]> = {
 
 // ─── Droppable column zone ────────────────────────────────────────────────────
 
-function DroppableColumn({ col, colName, isOver, children }: {
-  col: number
+function DroppableColumn({ dropId, colName, showLabel = true, isOver, children }: {
+  dropId: string
   colName: string
+  showLabel?: boolean
   isOver: boolean
   children: React.ReactNode
 }) {
-  const { setNodeRef } = useDroppable({ id: `drop-col-${col}` })
+  const { setNodeRef } = useDroppable({ id: dropId })
   return (
     <div
       ref={setNodeRef}
@@ -834,15 +973,17 @@ function DroppableColumn({ col, colName, isOver, children }: {
         position: 'relative',
       }}
     >
-      {/* Column label — only visible in edit mode */}
-      <div style={{
-        fontSize: '9px', fontFamily: 'Inter, sans-serif', fontWeight: 700,
-        color: '#C4AB77', textTransform: 'uppercase', letterSpacing: '0.1em',
-        marginBottom: '6px', paddingBottom: '4px',
-        borderBottom: '1px solid rgba(139,105,20,0.25)',
-      }}>
-        {colName}
-      </div>
+      {/* Column label — only visible in edit mode, on the first segment of this column */}
+      {showLabel && (
+        <div style={{
+          fontSize: '9px', fontFamily: 'Inter, sans-serif', fontWeight: 700,
+          color: '#C4AB77', textTransform: 'uppercase', letterSpacing: '0.1em',
+          marginBottom: '6px', paddingBottom: '4px',
+          borderBottom: '1px solid rgba(139,105,20,0.25)',
+        }}>
+          {colName}
+        </div>
+      )}
       {children}
     </div>
   )
@@ -850,8 +991,10 @@ function DroppableColumn({ col, colName, isOver, children }: {
 
 // ─── Visual sortable block (renders actual Victorian content) ─────────────────
 
-function VisualSortableBlock({ block, onEdit, onDelete, onDuplicate, onToggleVisible }: {
+function VisualSortableBlock({ block, products, currency, onEdit, onDelete, onDuplicate, onToggleVisible }: {
   block: EditBlock
+  products: ProductSummary[]
+  currency: string
   onEdit: (block: EditBlock) => void
   onDelete: (id: string) => void
   onDuplicate: (id: string) => void
@@ -873,12 +1016,25 @@ function VisualSortableBlock({ block, onEdit, onDelete, onDuplicate, onToggleVis
         position: 'relative',
         marginBottom: '2px',
         borderRadius: '2px',
-        outline: hovered && !isDragging ? '2px solid rgba(139,105,20,0.5)' : '2px solid transparent',
+        paddingTop: (block.colSpan ?? 1) > 1 ? '20px' : undefined,
+        outline: hovered && !isDragging ? '2px solid rgba(139,105,20,0.5)' : (block.colSpan ?? 1) > 1 ? '1px dashed rgba(122,86,76,0.5)' : '2px solid transparent',
         outlineOffset: '1px',
       }}
     >
+      {/* Spans indicator */}
+      {(block.colSpan ?? 1) > 1 && (
+        <div style={{
+          position: 'absolute', top: '3px', left: '3px', zIndex: 15,
+          backgroundColor: 'rgba(122,86,76,0.9)', color: '#E8E6D8',
+          fontFamily: 'Inter, sans-serif', fontSize: '9px', fontWeight: 700,
+          padding: '2px 6px', borderRadius: '3px', pointerEvents: 'none',
+        }}>
+          ↔ spans {block.colSpan}
+        </div>
+      )}
+
       {/* Actual Victorian content */}
-      <StaticBlock block={block} />
+      <StaticBlock block={block} products={products} currency={currency} />
 
       {/* Hover toolbar */}
       {hovered && !isDragging && (
@@ -944,12 +1100,12 @@ function ToolbarBtn({ title, onClick, color, children }: { title: string; onClic
 
 // ─── Visual edit panel ────────────────────────────────────────────────────────
 
-function EditablePanel({ pageId, columnCount, layout }: { pageId: string; columnCount: number; layout: string }) {
+function EditablePanel({ pageId, columnCount, layout, products, currency }: { pageId: string; columnCount: number; layout: string; products: ProductSummary[]; currency: string }) {
   const ctx = useContext(CmsEditContext)!
   const blocks = ctx.getPageBlocks(pageId)
   const [editingBlock, setEditingBlock] = useState<EditBlock | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [overCol, setOverCol] = useState<number | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -959,17 +1115,12 @@ function EditablePanel({ pageId, columnCount, layout }: { pageId: string; column
   const gridTemplate = LAYOUT_GRIDS[layout] ?? `repeat(${columnCount}, 1fr)`
   const colNames = LAYOUT_COL_NAMES[layout] ?? Array.from({ length: columnCount }, (_, i) => `Column ${i + 1}`)
 
+  // The blocks array's own order is the single source of truth for both each column's
+  // relative order AND the page's overall reading sequence (which is what decides where
+  // a spanning block breaks the column flow). blockOrder is only ever recomputed, from
+  // this array order, at save time — nothing here reads its value.
   function getColBlocks(col: number) {
-    return blocks.filter((b) => b.column === col).sort((a, b) => a.blockOrder - b.blockOrder)
-  }
-
-  function renumberAll(list: EditBlock[]): EditBlock[] {
-    const result = [...list]
-    for (let c = 1; c <= columnCount; c++) {
-      const inCol = result.filter((b) => b.column === c).sort((a, b) => a.blockOrder - b.blockOrder)
-      inCol.forEach((b, i) => { b.blockOrder = i + 1 })
-    }
-    return result
+    return blocks.filter((b) => b.column === col)
   }
 
   function handleDragStart({ active }: DragStartEvent) {
@@ -977,66 +1128,45 @@ function EditablePanel({ pageId, columnCount, layout }: { pageId: string; column
   }
 
   function handleDragOver({ over }: { over: { id: string | number } | null }) {
-    if (!over) { setOverCol(null); return }
-    const overId = over.id as string
-    const colMatch = overId.match(/^drop-col-(\d+)$/)
-    if (colMatch) { setOverCol(parseInt(colMatch[1])); return }
-    const overBlock = blocks.find((b) => b.id === overId)
-    setOverCol(overBlock?.column ?? null)
+    setOverId(over ? (over.id as string) : null)
   }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     setActiveId(null)
-    setOverCol(null)
+    setOverId(null)
     if (!over) return
 
-    const activeBlock = blocks.find((b) => b.id === active.id)
-    if (!activeBlock) return
+    const activeIdx = blocks.findIndex((b) => b.id === active.id)
+    if (activeIdx === -1) return
+    const activeBlock = blocks[activeIdx]
 
-    const overId = over.id as string
-    const colMatch = overId.match(/^drop-col-(\d+)$/)
-    const targetCol = colMatch
-      ? parseInt(colMatch[1])
-      : (blocks.find((b) => b.id === overId)?.column ?? activeBlock.column)
+    const overRawId = over.id as string
+    const colMatch = overRawId.match(/^drop-col-(\d+)-\d+$/)
 
-    if (targetCol === activeBlock.column && !colMatch) {
-      // Same column reorder
-      const colBlocks = getColBlocks(activeBlock.column)
-      const oi = colBlocks.findIndex((b) => b.id === active.id)
-      const ni = colBlocks.findIndex((b) => b.id === overId)
-      if (ni === -1 || oi === ni) return
-      const reordered = arrayMove(colBlocks, oi, ni)
-      const updated = blocks.map((b) => {
-        const pos = reordered.findIndex((r) => r.id === b.id)
-        return pos !== -1 ? { ...b, blockOrder: pos + 1 } : b
-      })
-      ctx.setPageBlocks(pageId, updated)
-    } else if (targetCol !== activeBlock.column) {
-      // Cross-column move
-      const targetColBlocks = getColBlocks(targetCol)
-      const overIdx = targetColBlocks.findIndex((b) => b.id === overId)
-      const insertAt = overIdx === -1 ? targetColBlocks.length : overIdx
-
-      const newTargetBlocks = [...targetColBlocks]
-      newTargetBlocks.splice(insertAt, 0, { ...activeBlock, column: targetCol })
-
-      const updated = blocks.map((b) =>
-        b.id === active.id ? { ...b, column: targetCol } : b
-      )
-      ctx.setPageBlocks(pageId, renumberAll(updated.map((b) => {
-        if (b.column === targetCol) {
-          const pos = newTargetBlocks.findIndex((r) => r.id === b.id)
-          return pos !== -1 ? { ...b, blockOrder: pos + 1 } : b
-        }
-        if (b.column === activeBlock.column && b.id !== active.id) {
-          const srcBlocks = updated.filter((x) => x.column === activeBlock.column && x.id !== active.id).sort((a, b) => a.blockOrder - b.blockOrder)
-          const pos = srcBlocks.findIndex((r) => r.id === b.id)
-          return pos !== -1 ? { ...b, blockOrder: pos + 1 } : b
-        }
-        return b
-      })))
+    if (colMatch) {
+      // Dropped on an empty segment/column, not on another block — move to the end
+      // of that column's blocks (or the end of the page if the column has none yet).
+      const targetCol = parseInt(colMatch[1])
+      const without = blocks.filter((_, i) => i !== activeIdx)
+      let insertAt = without.length
+      for (let i = without.length - 1; i >= 0; i--) {
+        if (without[i].column === targetCol) { insertAt = i + 1; break }
+      }
+      const next = [...without.slice(0, insertAt), { ...activeBlock, column: targetCol }, ...without.slice(insertAt)]
+      ctx.setPageBlocks(pageId, next)
+      return
     }
+
+    const overIdx = blocks.findIndex((b) => b.id === overRawId)
+    if (overIdx === -1 || overIdx === activeIdx) return
+    const overBlock = blocks[overIdx]
+
+    const withUpdatedColumn = activeBlock.column === overBlock.column
+      ? blocks
+      : blocks.map((b, i) => (i === activeIdx ? { ...b, column: overBlock.column } : b))
+
+    ctx.setPageBlocks(pageId, arrayMove(withUpdatedColumn, activeIdx, overIdx))
   }
 
   const handleEditSave = useCallback((updated: EditBlock) => {
@@ -1045,7 +1175,7 @@ function EditablePanel({ pageId, columnCount, layout }: { pageId: string; column
 
   function handleDelete(id: string) {
     if (!confirm('Delete this block?')) return
-    ctx.setPageBlocks(pageId, renumberAll(blocks.filter((b) => b.id !== id)))
+    ctx.setPageBlocks(pageId, blocks.filter((b) => b.id !== id))
   }
 
   function handleDuplicate(id: string) {
@@ -1054,22 +1184,31 @@ function EditablePanel({ pageId, columnCount, layout }: { pageId: string; column
     const copy: EditBlock = { ...blocks[idx], id: `new-${Date.now()}` }
     const next = [...blocks]
     next.splice(idx + 1, 0, copy)
-    ctx.setPageBlocks(pageId, renumberAll(next))
+    ctx.setPageBlocks(pageId, next)
   }
 
   function handleAdd(type: string, col: number) {
-    const colBlocks = getColBlocks(col)
     const nb: EditBlock = {
       id: `new-${Date.now()}`,
       blockType: type, content: '',
-      column: col, visible: true,
-      blockOrder: colBlocks.length + 1,
+      column: col, colSpan: 1, visible: true,
+      blockOrder: 0,
     }
-    ctx.setPageBlocks(pageId, [...blocks, nb])
+    let insertAt = blocks.length
+    for (let i = blocks.length - 1; i >= 0; i--) {
+      if (blocks[i].column === col) { insertAt = i + 1; break }
+    }
+    ctx.setPageBlocks(pageId, [...blocks.slice(0, insertAt), nb, ...blocks.slice(insertAt)])
     setEditingBlock(nb)
   }
 
   const activeBlock = activeId ? blocks.find((b) => b.id === activeId) : null
+
+  // Same row-grouping the published page uses, so what you see while editing is
+  // exactly what you'll see once saved — a spanning block really does break out of
+  // the column flow here too, not just show a badge.
+  const rows = groupBlocksIntoRows(blocks, columnCount)
+  const lastColumnsRowIndex = rows.map((r) => r.type).lastIndexOf('columns')
 
   return (
     <>
@@ -1080,36 +1219,66 @@ function EditablePanel({ pageId, columnCount, layout }: { pageId: string; column
         onDragOver={handleDragOver as never}
         onDragEnd={handleDragEnd}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '0 12px' }}>
-          {Array.from({ length: columnCount }, (_, ci) => {
-            const col = ci + 1
-            const colBlocks = getColBlocks(col)
-            return (
-              <DroppableColumn key={col} col={col} colName={colNames[ci] ?? `Column ${col}`} isOver={overCol === col}>
-                <SortableContext items={colBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                  {colBlocks.length === 0 && !activeId && (
-                    <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: "'Libre Baskerville', serif", color: 'rgba(139,105,20,0.5)', fontStyle: 'italic', fontSize: '12px', borderRadius: '2px', border: '1px dashed rgba(139,105,20,0.3)' }}>
-                      Drop blocks here
-                    </div>
-                  )}
-                  {colBlocks.map((block) => (
-                    <VisualSortableBlock
-                      key={block.id}
-                      block={block}
-                      onEdit={setEditingBlock}
-                      onDelete={handleDelete}
-                      onDuplicate={handleDuplicate}
-                      onToggleVisible={(id) =>
-                        ctx.setPageBlocks(pageId, blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b))
-                      }
-                    />
-                  ))}
+        {rows.map((row, ri) =>
+          row.type === 'span' ? (
+            <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '0 12px', marginBottom: '8px' }}>
+              <div style={{ gridColumn: spanGridColumn(row.block, columnCount) }}>
+                <SortableContext items={[row.block.id]} strategy={verticalListSortingStrategy}>
+                  <VisualSortableBlock
+                    block={row.block}
+                    products={products}
+                    currency={currency}
+                    onEdit={setEditingBlock}
+                    onDelete={handleDelete}
+                    onDuplicate={handleDuplicate}
+                    onToggleVisible={(id) =>
+                      ctx.setPageBlocks(pageId, blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b))
+                    }
+                  />
                 </SortableContext>
-                <AddBlockButton onAdd={(type) => handleAdd(type, col)} />
-              </DroppableColumn>
-            )
-          })}
-        </div>
+              </div>
+            </div>
+          ) : (
+            <div key={ri} style={{ display: 'grid', gridTemplateColumns: gridTemplate, gap: '0 12px' }}>
+              {row.columns.map((colBlocks, ci) => {
+                const col = ci + 1
+                const dropId = `drop-col-${col}-${ri}`
+                return (
+                  <DroppableColumn
+                    key={col}
+                    dropId={dropId}
+                    colName={colNames[ci] ?? `Column ${col}`}
+                    showLabel={ri === 0}
+                    isOver={overId === dropId}
+                  >
+                    <SortableContext items={colBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                      {colBlocks.length === 0 && !activeId && (
+                        <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: "'Libre Baskerville', serif", color: 'rgba(139,105,20,0.5)', fontStyle: 'italic', fontSize: '12px', borderRadius: '2px', border: '1px dashed rgba(139,105,20,0.3)' }}>
+                          Drop blocks here
+                        </div>
+                      )}
+                      {colBlocks.map((block) => (
+                        <VisualSortableBlock
+                          key={block.id}
+                          block={block}
+                          products={products}
+                          currency={currency}
+                          onEdit={setEditingBlock}
+                          onDelete={handleDelete}
+                          onDuplicate={handleDuplicate}
+                          onToggleVisible={(id) =>
+                            ctx.setPageBlocks(pageId, blocks.map((b) => b.id === id ? { ...b, visible: !b.visible } : b))
+                          }
+                        />
+                      ))}
+                    </SortableContext>
+                    {ri === lastColumnsRowIndex && <AddBlockButton onAdd={(type) => handleAdd(type, col)} />}
+                  </DroppableColumn>
+                )
+              })}
+            </div>
+          )
+        )}
 
         {/* Drag overlay — shows block content while dragging */}
         <DragOverlay>
@@ -1124,7 +1293,7 @@ function EditablePanel({ pageId, columnCount, layout }: { pageId: string; column
               padding: '6px 8px',
               cursor: 'grabbing',
             }}>
-              <StaticBlock block={activeBlock} />
+              <StaticBlock block={activeBlock} products={products} currency={currency} />
             </div>
           )}
         </DragOverlay>
@@ -1136,6 +1305,8 @@ function EditablePanel({ pageId, columnCount, layout }: { pageId: string; column
           onSave={handleEditSave}
           onClose={() => setEditingBlock(null)}
           columnCount={columnCount}
+          products={products}
+          currency={currency}
         />
       )}
     </>
@@ -1150,9 +1321,11 @@ interface Props {
   columnCount: number
   layout: string
   isPlaceholder: boolean
+  products?: ProductSummary[]
+  currency?: string
 }
 
-export function CmsBlockArea({ pageId, initialBlocks, columnCount, layout, isPlaceholder }: Props) {
+export function CmsBlockArea({ pageId, initialBlocks, columnCount, layout, isPlaceholder, products = [], currency = 'USD' }: Props) {
   const ctx = useContext(CmsEditContext)
   const isEditMode = ctx?.isEditMode ?? false
   const isCurrentPage = ctx?.currentPageId === pageId
@@ -1165,9 +1338,9 @@ export function CmsBlockArea({ pageId, initialBlocks, columnCount, layout, isPla
         </p>
       )
     }
-    return <StaticBlocks blocks={initialBlocks} columnCount={columnCount} />
+    return <StaticBlocks blocks={initialBlocks} columnCount={columnCount} products={products} currency={currency} />
   }
 
   // Edit mode — render the visual in-place editor (no dark overlay, blocks look as published)
-  return <EditablePanel pageId={pageId} columnCount={columnCount} layout={layout} />
+  return <EditablePanel pageId={pageId} columnCount={columnCount} layout={layout} products={products} currency={currency} />
 }
