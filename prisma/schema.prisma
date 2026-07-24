@@ -205,6 +205,7 @@ model SubscriptionPlan {
   description         String?  @db.Text
   priceMonthly        Int?     // cents — null = free
   priceYearly         Int?     // cents — null = not offered yearly
+  stripeProductId     String?
   stripePriceIdMonthly String?
   stripePriceIdYearly  String?
   trialDays           Int      @default(0)
@@ -258,6 +259,7 @@ model Product {
   compareAtCents Int?
   images         String?        // JSON array of MediaFile IDs
   stripeProductId String?
+  stripePriceId  String?
   inventory      Int?
   lowStockAlert  Int?           // alert when inventory falls to this number
   visible        Boolean        @default(true)

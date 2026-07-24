@@ -60,6 +60,7 @@ export function PlanList({ initialPlans, currency }: { initialPlans: Plan[]; cur
       } else {
         setPlans((p) => [...p, json.plan])
       }
+      if (json.stripeWarning) alert(json.stripeWarning)
       setEditing(null); setShowForm(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error')
@@ -245,19 +246,19 @@ function PlanForm({ plan, saving, error, currency, onSave, onCancel }: {
         </Field>
       </div>
 
-      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-4">
-        <p className="text-xs font-semibold text-amber-800 uppercase tracking-widest">Stripe Price IDs</p>
-        <p className="text-xs text-amber-700">Copy these from the Stripe Dashboard → Products → your plan → Pricing. Required for Stripe Checkout to work. Start with <code className="font-mono bg-amber-100 px-1 rounded">price_</code></p>
+      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
+        <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest">Stripe Price IDs <span className="font-normal normal-case text-gray-400">(auto)</span></p>
+        <p className="text-xs text-gray-500">Created automatically in Stripe when you save a monthly/yearly price above — no need to touch these. Only paste a price_… ID here if you want to link to a price that already exists in Stripe.</p>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Monthly Price ID" helpText="The Stripe price ID for monthly billing.">
+          <Field label="Monthly Price ID" helpText="Auto-created on save.">
             <input type="text" value={form.stripePriceIdMonthly ?? ''}
               onChange={(e) => f('stripePriceIdMonthly', e.target.value || null)}
-              className="input font-mono" placeholder="price_1ABC…" />
+              className="input font-mono" placeholder="auto-created on save" />
           </Field>
-          <Field label="Yearly Price ID" helpText="The Stripe price ID for annual billing. Leave blank if no yearly option.">
+          <Field label="Yearly Price ID" helpText="Auto-created on save if a yearly price is set above.">
             <input type="text" value={form.stripePriceIdYearly ?? ''}
               onChange={(e) => f('stripePriceIdYearly', e.target.value || null)}
-              className="input font-mono" placeholder="price_1DEF…" />
+              className="input font-mono" placeholder="auto-created on save" />
           </Field>
         </div>
       </div>

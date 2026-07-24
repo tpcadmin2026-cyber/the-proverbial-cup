@@ -22,6 +22,7 @@ interface Product {
   compareAtCents: number | null
   images: string | null
   stripeProductId: string | null
+  stripePriceId: string | null
   inventory: number | null
   lowStockAlert: number | null
   visible: boolean
@@ -114,10 +115,11 @@ export function ProductEditor({ product, currency }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      const json = await res.json()
       if (!res.ok) {
-        const d = await res.json()
-        throw new Error(d.error || 'Failed to save product.')
+        throw new Error(json.error || 'Failed to save product.')
       }
+      if (json.stripeWarning) alert(json.stripeWarning)
       router.push('/admin/store/products')
       router.refresh()
     } catch (err: unknown) {
@@ -313,12 +315,12 @@ export function ProductEditor({ product, currency }: Props) {
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Stripe Price ID</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Stripe Price ID <span className="font-normal text-gray-400">(auto)</span></label>
               <input
                 type="text"
                 value={v.stripePriceId ?? ''}
                 onChange={(e) => updateVariant(i, 'stripePriceId', e.target.value || null)}
-                placeholder="price_…"
+                placeholder="auto-created on save"
                 className="input text-xs font-mono"
               />
             </div>
@@ -338,14 +340,17 @@ export function ProductEditor({ product, currency }: Props) {
       <section className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
         <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Stripe & visibility</h2>
 
-        <Field label="Stripe Product ID" helpText="Optional — paste the prod_… ID from Stripe. Used to link this product to a Stripe product for payment processing.">
+        <Field label="Stripe Product ID" helpText="Created automatically in Stripe when you save — no need to touch this. Only paste a prod_… ID here if you want to link to a product that already exists in Stripe.">
           <input
             type="text"
             value={stripeProductId}
             onChange={(e) => setStripeProductId(e.target.value)}
-            placeholder="prod_…"
+            placeholder="auto-created on save"
             className="input font-mono"
           />
+          {product?.stripePriceId && (
+            <p className="text-xs text-gray-400 mt-1">Base price: <span className="font-mono">{product.stripePriceId}</span></p>
+          )}
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
