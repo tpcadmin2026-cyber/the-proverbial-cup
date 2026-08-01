@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SeoPanel } from '@/components/admin/SeoPanel'
+import { RichTextEditor } from '@/components/site/RichTextEditor'
+import { richTextToPlainText } from '@/lib/richText'
 
 interface Variant {
   id?: string
@@ -197,13 +199,12 @@ export function ProductEditor({ product, currency }: Props) {
           </datalist>
         </Field>
 
-        <Field label="Description" helpText="Shown on the product detail page. Supports basic markdown: **bold**, *italic*, bullet lists.">
-          <textarea
+        <Field label="Description" helpText="Shown on the product detail page.">
+          <RichTextEditor
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={6}
+            onChange={setDescription}
             placeholder="A vibrant, fruity coffee from the highlands of Ethiopia…"
-            className="input resize-y"
+            minHeight={160}
           />
         </Field>
 
@@ -383,7 +384,7 @@ export function ProductEditor({ product, currency }: Props) {
           contentType="product"
           contentId={product.id}
           defaultTitle={name}
-          defaultDescription={description.replace(/[#*_\[\]]/g, '').slice(0, 160)}
+          defaultDescription={richTextToPlainText(description).slice(0, 160)}
         />
       )}
 

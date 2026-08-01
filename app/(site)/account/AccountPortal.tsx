@@ -32,14 +32,25 @@ interface UserData {
   phoneNumber: string | null
 }
 
+interface OrderSummary {
+  id: string
+  createdAt: string
+  status: string
+  totalCents: number
+  currency: string
+  trackingNumber: string | null
+  lineItems: Array<{ name: string; qty: number; variantName?: string }>
+}
+
 interface Props {
   user: UserData
   subscription: Subscription | null
+  orders: OrderSummary[]
   siteName: string
   currency: string
 }
 
-type Tab = 'overview' | 'profile' | 'password' | 'danger'
+type Tab = 'overview' | 'orders' | 'profile' | 'password' | 'danger'
 
 function formatPrice(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
@@ -213,6 +224,53 @@ function OverviewTab({ subscription, currency, onNavigate }: {
           </Link>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Tab: Orders ───────────────────────────────────────────────────────────────
+
+const ORDER_STATUS_STYLES: Record<string, string> = {
+  pending:   'bg-yellow-100 text-yellow-800',
+  paid:      'bg-green-100 text-green-800',
+  fulfilled: 'bg-blue-100 text-blue-800',
+  cancelled: 'bg-gray-100 text-gray-500',
+  refunded:  'bg-red-100 text-red-800',
+}
+
+function OrdersTab({ orders }: { orders: OrderSummary[] }) {
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-sm text-[#4B4C44]">You haven't placed any orders yet.</p>
+        <Link href="/shop" className="inline-block mt-3 text-xs text-[#C4AB77] hover:underline">Visit the shop →</Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {orders.map((order) => (
+        <div key={order.id} className="border border-[#e8e4d0] rounded-lg overflow-hidden">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-[#faf9f5] border-b border-[#e8e4d0]">
+            <span className="text-xs text-[#4B4C44]">{formatDate(order.createdAt)}</span>
+            <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${ORDER_STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-500'}`}>
+              {order.status}
+            </span>
+            {order.trackingNumber && (
+              <span className="text-xs text-[#4B4C44]">Tracking: <strong>{order.trackingNumber}</strong></span>
+            )}
+            <span className="ml-auto text-sm font-semibold text-[#35291C]">{formatPrice(order.totalCents, order.currency)}</span>
+          </div>
+          <div className="px-4 py-3 space-y-1">
+            {order.lineItems.map((item, i) => (
+              <div key={i} className="flex items-center justify-between text-sm text-[#4B4C44]">
+                <span>{item.name}{item.variantName ? ` — ${item.variantName}` : ''} × {item.qty}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -471,11 +529,12 @@ function DangerTab({ userEmail }: { userEmail: string }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function AccountPortal({ user, subscription, siteName, currency }: Props) {
+export function AccountPortal({ user, subscription, orders, siteName, currency }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'My Subscription' },
+    { key: 'orders', label: 'Purchase History' },
     { key: 'profile', label: 'Profile' },
     { key: 'password', label: 'Password' },
     { key: 'danger', label: 'Account' },
@@ -543,6 +602,7 @@ export function AccountPortal({ user, subscription, siteName, currency }: Props)
             {activeTab === 'overview' && (
               <OverviewTab subscription={subscription} currency={currency} onNavigate={setActiveTab} />
             )}
+            {activeTab === 'orders' && <OrdersTab orders={orders} />}
             {activeTab === 'profile' && <ProfileTab user={user} />}
             {activeTab === 'password' && <PasswordTab />}
             {activeTab === 'danger' && <DangerTab userEmail={user.email} />}

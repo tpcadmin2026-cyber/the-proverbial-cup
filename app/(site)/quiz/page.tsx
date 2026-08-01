@@ -1,7 +1,9 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
 import { getSetting } from '@/lib/settings'
 import { isEnabled } from '@/lib/features'
-import { QuizFlow } from './QuizFlow'
+import { ensureDefaultQuiz } from '@/lib/quizMigration'
 import { FeatureDisabled } from '@/components/site/FeatureDisabled'
 import type { Metadata } from 'next'
 
@@ -13,37 +15,41 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function QuizPage() {
+export default async function QuizIndexPage() {
   const siteName = await getSetting<string>('site.name', 'The Proverbial Cup')
   if (!await isEnabled('quiz')) {
     return <FeatureDisabled siteName={siteName} title="Find Your Perfect Blend" message="Our recommendation quiz is coming soon. In the meantime, browse our subscription plans to find the right fit." />
   }
-  const [questions, plans, heading, subheading, resultHeading, resultSubtext, currency] = await Promise.all([
-    db.quizQuestion.findMany({
-      where: { active: true },
-      orderBy: { order: 'asc' },
-      include: { answers: { orderBy: { order: 'asc' } } },
-    }),
-    db.subscriptionPlan.findMany({
-      where: { visible: true },
-      orderBy: { displayOrder: 'asc' },
-    }),
-    getSetting<string>('quiz.heading',       'Find Your Perfect Subscription'),
-    getSetting<string>('quiz.subheading',    'Answer a few brief questions and we shall recommend the finest subscription for your tastes.'),
-    getSetting<string>('quiz.resultHeading', 'Our Recommendation for You'),
-    getSetting<string>('quiz.resultSubtext', 'Based upon your answers, we believe the following subscription would suit you admirably.'),
-    getSetting<string>('payments.currency', 'USD'),
-  ])
+
+  await ensureDefaultQuiz()
+  const quizzes = await db.quiz.findMany({ where: { visible: true }, orderBy: { createdAt: 'asc' } })
+
+  if (quizzes.length === 1) redirect(`/quiz/${quizzes[0].slug}`)
 
   return (
-    <QuizFlow
-      questions={questions}
-      plans={plans}
-      heading={heading}
-      subheading={subheading}
-      resultHeading={resultHeading}
-      resultSubtext={resultSubtext}
-      currency={currency}
-    />
+    <div
+      className="min-h-screen py-16 px-6"
+      style={{ backgroundColor: '#E8E6D8' }}
+    >
+      <div className="max-w-lg mx-auto text-center">
+        <div className="font-playfair text-2xl text-[#35291C] mb-6">{siteName}</div>
+        {quizzes.length === 0 ? (
+          <p className="font-baskerville italic text-[#4B4C44]">No quizzes are available right now — please check back soon.</p>
+        ) : (
+          <div className="space-y-3 text-left">
+            {quizzes.map((quiz) => (
+              <Link
+                key={quiz.id}
+                href={`/quiz/${quiz.slug}`}
+                className="block bg-white border border-[#c8c4a8] rounded-lg p-5 hover:border-[#C4AB77] transition-colors"
+              >
+                <div className="font-playfair text-lg text-[#35291C]">{quiz.heading}</div>
+                {quiz.subheading && <p className="text-sm text-[#4B4C44] mt-1">{quiz.subheading}</p>}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

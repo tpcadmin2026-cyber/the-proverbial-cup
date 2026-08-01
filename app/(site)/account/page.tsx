@@ -25,12 +25,17 @@ export default async function AccountPage() {
 
   if (!session || session.expires < new Date()) redirect('/login?redirect=/account')
 
-  const [siteName, currency] = await Promise.all([
+  const user = session.user
+
+  const [siteName, currency, orders] = await Promise.all([
     getSetting<string>('site.name', 'My Site'),
     getSetting<string>('payments.currency', 'USD'),
+    db.order.findMany({
+      where: { customerEmail: { equals: user.email, mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    }),
   ])
-
-  const user = session.user
 
   return (
     <AccountPortal
@@ -58,6 +63,15 @@ export default async function AccountPage() {
           maxPauseDays: user.subscription.plan.maxPauseDays,
         },
       } : null}
+      orders={orders.map((o) => ({
+        id: o.id,
+        createdAt: o.createdAt.toISOString(),
+        status: o.status,
+        totalCents: o.totalCents,
+        currency: o.currency,
+        trackingNumber: o.trackingNumber,
+        lineItems: o.lineItems ? JSON.parse(o.lineItems) : [],
+      }))}
       siteName={siteName}
       currency={currency}
     />

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { db } from '@/lib/db'
 import { getSetting } from '@/lib/settings'
 import { isEnabled } from '@/lib/features'
+import { richTextToPlainText } from '@/lib/richText'
 import { ProductDetail } from './ProductDetail'
 import type { Metadata } from 'next'
 
@@ -13,12 +14,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     getSetting<string>('site.name', 'My Site'),
   ])
   if (!product) return {}
+  const description = product.description ? richTextToPlainText(product.description) : undefined
   return {
     title: `${product.name}`,
-    description: product.description ?? undefined,
+    description,
     openGraph: {
       title: product.name,
-      description: product.description ?? undefined,
+      description,
     },
   }
 }

@@ -6,7 +6,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ us
   try {
     await requireAdmin()
     const { userId } = await params
-    const { name, role, planId, subStatus } = await req.json()
+    const { name, role, planId, subStatus, emailVerified } = await req.json()
 
     // Update user
     await db.user.update({
@@ -14,6 +14,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ us
       data: {
         ...(name !== undefined && { name: name || null }),
         ...(role !== undefined && { role }),
+        // Manual override — lets an admin unblock an account when the verification
+        // email never went out or never arrived.
+        ...(emailVerified !== undefined && { emailVerified: emailVerified ? new Date() : null }),
       },
     })
 

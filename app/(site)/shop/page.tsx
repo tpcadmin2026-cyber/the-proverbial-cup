@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { db } from '@/lib/db'
 import { getSetting } from '@/lib/settings'
 import { isEnabled } from '@/lib/features'
+import { richTextToPlainText } from '@/lib/richText'
 import { AddToCartButton } from './AddToCartButton'
 import { FeatureDisabled } from '@/components/site/FeatureDisabled'
 import type { Metadata } from 'next'
@@ -122,7 +123,7 @@ export default async function ShopPage() {
                           </h3>
                         </Link>
                         <p className="font-baskerville italic text-sm text-[#4B4C44] leading-relaxed mb-4 flex-1 line-clamp-3">
-                          {product.description}
+                          {product.description ? richTextToPlainText(product.description) : null}
                         </p>
 
                         {/* Price row */}

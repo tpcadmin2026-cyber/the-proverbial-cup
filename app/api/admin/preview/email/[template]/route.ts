@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { renderAsync } from '@react-email/components'
 import { getSetting } from '@/lib/settings'
+import { getEmailTemplateOverrides } from '@/lib/emailTemplateSettings'
 import * as React from 'react'
 import { requireAdmin } from '@/lib/auth'
 
@@ -16,6 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
   const siteName = await getSetting<string>('site.name', SITE)
   const footerText = await getSetting<string>('email.footer', `© ${siteName}`)
   const currency = await getSetting<string>('payments.currency', 'USD')
+  const overrides = await getEmailTemplateOverrides(params.template, siteName)
 
   let element: React.ReactElement | null = null
 
@@ -27,6 +29,7 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
         verifyUrl: `${BASE}/verify-email?token=preview_token_example&email=reader%40example.com`,
         siteName,
         footerText,
+        ...overrides,
       })
       break
     }
@@ -36,6 +39,7 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
         resetUrl: `${BASE}/reset-password?token=preview_token_example&email=reader%40example.com`,
         siteName,
         footerText,
+        ...overrides,
       })
       break
     }
@@ -47,6 +51,7 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
         acceptUrl: `${BASE}/accept-invite?token=preview_token_example&email=newstaff%40example.com&role=manager`,
         siteName,
         footerText,
+        ...overrides,
       })
       break
     }
@@ -60,6 +65,7 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
         accountUrl: `${BASE}/account`,
         siteName,
         footerText,
+        ...overrides,
       })
       break
     }
@@ -76,6 +82,7 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
         total: formatPrice(54.97, currency),
         siteName,
         footerText,
+        ...overrides,
       })
       break
     }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { RichTextEditor } from '@/components/site/RichTextEditor'
 
 interface Post {
   id: string
@@ -42,7 +43,6 @@ export function BlogEditor({ post }: Props) {
 
   const [status, setStatus]   = useState<'idle' | 'saving' | 'deleting'>('idle')
   const [error, setError]     = useState('')
-  const [preview, setPreview] = useState(false)
 
   function slugify(s: string) {
     return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -86,8 +86,6 @@ export function BlogEditor({ post }: Props) {
     router.push('/admin/content/blog')
     router.refresh()
   }
-
-  const renderedContent = renderPreview(form.content)
 
   return (
     <div className="p-8 max-w-4xl">
@@ -193,38 +191,14 @@ export function BlogEditor({ post }: Props) {
 
         {/* Content editor */}
         <section className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Content</h2>
-            <button
-              type="button"
-              onClick={() => setPreview((v) => !v)}
-              className="text-xs text-[#C4AB77] border border-[#C4AB77] px-3 py-1 rounded hover:bg-amber-50 transition-colors"
-            >
-              {preview ? 'Edit' : 'Preview'}
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-400">
-            Supports basic formatting: <code className="bg-gray-100 px-1 rounded">## Heading</code>, <code className="bg-gray-100 px-1 rounded">### Sub-heading</code>, <code className="bg-gray-100 px-1 rounded">**bold**</code>, <code className="bg-gray-100 px-1 rounded">*italic*</code>, <code className="bg-gray-100 px-1 rounded">- bullet list</code>. Separate paragraphs with a blank line.
-          </p>
-
-          {preview ? (
-            <div
-              className="min-h-[400px] prose prose-sm max-w-none border border-gray-100 rounded p-4 bg-[#fdfcf8]"
-              style={{ fontFamily: 'Georgia, serif' }}
-              dangerouslySetInnerHTML={{ __html: renderedContent }}
-            />
-          ) : (
-            <textarea
-              value={form.content}
-              onChange={(e) => set('content', e.target.value)}
-              rows={20}
-              required
-              placeholder={"## Introduction\n\nWrite your post here. Use ## for headings, ### for sub-headings, **bold**, *italic*, and - for bullet points.\n\nSeparate paragraphs with a blank line."}
-              className="input resize-y font-mono text-sm"
-              style={{ minHeight: '400px' }}
-            />
-          )}
+          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Content</h2>
+          <RichTextEditor
+            value={form.content}
+            onChange={(html) => set('content', html)}
+            placeholder="Write your post here…"
+            minHeight={400}
+          />
+          <p className="text-xs text-gray-400">Formatting is applied with the toolbar above.</p>
         </section>
 
         {/* Publish settings */}
@@ -307,44 +281,4 @@ function Field({ label, help, children }: { label: string; help?: string; childr
       {children}
     </div>
   )
-}
-
-function renderPreview(content: string): string {
-  if (!content.trim()) return '<p class="text-gray-400 italic">Nothing to preview yet.</p>'
-
-  const lines = content.split('\n')
-  const html: string[] = []
-  let listOpen = false
-
-  function closelist() {
-    if (listOpen) { html.push('</ul>'); listOpen = false }
-  }
-
-  function inline(text: string): string {
-    return text
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code style="background:#f3f4f6;padding:0 3px;border-radius:3px;font-size:0.85em">$1</code>')
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    if (line.startsWith('### ')) {
-      closelist()
-      html.push(`<h3 style="font-family:Georgia,serif;font-size:1.1rem;font-weight:700;margin:1.2em 0 0.4em;color:#35291C">${inline(line.slice(4))}</h3>`)
-    } else if (line.startsWith('## ')) {
-      closelist()
-      html.push(`<h2 style="font-family:Georgia,serif;font-size:1.4rem;font-weight:700;margin:1.5em 0 0.5em;color:#35291C;border-bottom:1px solid #e8e4d0;padding-bottom:0.3em">${inline(line.slice(3))}</h2>`)
-    } else if (line.startsWith('- ')) {
-      if (!listOpen) { html.push('<ul style="padding-left:1.4em;margin:0.6em 0;list-style:disc">'); listOpen = true }
-      html.push(`<li style="margin:0.25em 0">${inline(line.slice(2))}</li>`)
-    } else if (line.trim() === '') {
-      closelist()
-    } else {
-      closelist()
-      html.push(`<p style="margin:0.7em 0;line-height:1.7">${inline(line)}</p>`)
-    }
-  }
-  closelist()
-  return html.join('\n')
 }

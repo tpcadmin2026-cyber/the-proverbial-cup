@@ -15,7 +15,7 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 }
 
 interface Props {
-  user: { id: string; name: string; role: string }
+  user: { id: string; name: string; role: string; emailVerified: boolean }
   plans: SubscriptionPlan[]
   subscription: { planId: string; status: string } | null
 }
@@ -24,6 +24,7 @@ export function UserEditor({ user, plans, subscription }: Props) {
   const router = useRouter()
   const [name, setName] = useState(user.name)
   const [role, setRole] = useState(user.role)
+  const [emailVerified, setEmailVerified] = useState(user.emailVerified)
   const [planId, setPlanId] = useState(subscription?.planId ?? '')
   const [subStatus, setSubStatus] = useState(subscription?.status ?? 'active')
   const [saving, setSaving] = useState(false)
@@ -38,7 +39,7 @@ export function UserEditor({ user, plans, subscription }: Props) {
       const res = await fetch(`/api/admin/users/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, role, planId: planId || null, subStatus: subscription ? subStatus : undefined }),
+        body: JSON.stringify({ name, role, emailVerified, planId: planId || null, subStatus: subscription ? subStatus : undefined }),
       })
       if (!res.ok) {
         const d = await res.json()
@@ -83,6 +84,19 @@ export function UserEditor({ user, plans, subscription }: Props) {
             ))}
           </select>
         </div>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={emailVerified}
+            onChange={(e) => setEmailVerified(e.target.checked)}
+            className="mt-0.5 accent-[#C4AB77] w-4 h-4"
+          />
+          <div>
+            <span className="text-sm font-medium text-gray-800">Email verified</span>
+            <p className="text-xs text-gray-500">Manual override — turn this on if the verification email never arrived and the account is stuck unverified.</p>
+          </div>
+        </label>
 
         {plans.length > 0 && (
           <div>

@@ -4,6 +4,7 @@ import * as React from 'react'
 import { db } from './db'
 import { logChange } from './changelog'
 import { getSetting } from './settings'
+import { getEmailTemplateOverrides } from './emailTemplateSettings'
 
 // ── Passwords ─────────────────────────────────────────────────────────────────
 
@@ -169,12 +170,13 @@ export async function sendVerificationEmail(email: string, baseUrl: string, name
   const url   = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email)}`
 
   const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const overrides = await getEmailTemplateOverrides('verify', siteName)
 
   const { VerifyEmail } = await import('@/emails/VerifyEmail')
   await sendHtmlEmail({
     to:      email,
     subject: `Verify your ${siteName} account`,
-    react:   React.createElement(VerifyEmail, { name, verifyUrl: url, siteName, footerText: footerText || undefined, logoUrl: logoUrl || undefined }),
+    react:   React.createElement(VerifyEmail, { name, verifyUrl: url, siteName, footerText: footerText || undefined, logoUrl: logoUrl || undefined, ...overrides }),
   })
 }
 
@@ -183,12 +185,13 @@ export async function sendPasswordResetEmail(email: string, baseUrl: string) {
   const url   = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(email)}`
 
   const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const overrides = await getEmailTemplateOverrides('reset', siteName)
 
   const { PasswordReset } = await import('@/emails/PasswordReset')
   await sendHtmlEmail({
     to:      email,
     subject: `Reset your ${siteName} password`,
-    react:   React.createElement(PasswordReset, { resetUrl: url, siteName, footerText: footerText || undefined, logoUrl: logoUrl || undefined }),
+    react:   React.createElement(PasswordReset, { resetUrl: url, siteName, footerText: footerText || undefined, logoUrl: logoUrl || undefined, ...overrides }),
   })
 }
 
@@ -214,12 +217,13 @@ export async function sendInviteEmailWithLink({
   baseUrl: string
 }) {
   const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const overrides = await getEmailTemplateOverrides('invite', siteName)
 
   const { TeamInvite } = await import('@/emails/TeamInvite')
   await sendHtmlEmail({
     to,
     subject: `You have been invited to ${siteName}`,
-    react:   React.createElement(TeamInvite, { inviterName, role, acceptUrl: link, siteName, footerText: footerText || undefined, logoUrl: logoUrl || undefined }),
+    react:   React.createElement(TeamInvite, { inviterName, role, acceptUrl: link, siteName, footerText: footerText || undefined, logoUrl: logoUrl || undefined, ...overrides }),
   })
 
   await logChange({
@@ -247,6 +251,7 @@ export async function sendSubscriptionConfirmationEmail({
   baseUrl: string
 }) {
   const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const overrides = await getEmailTemplateOverrides('subscription', siteName)
 
   const { SubscriptionConfirmation } = await import('@/emails/SubscriptionConfirmation')
   await sendHtmlEmail({
@@ -261,6 +266,7 @@ export async function sendSubscriptionConfirmationEmail({
       siteName,
       footerText: footerText || undefined,
       logoUrl: logoUrl || undefined,
+      ...overrides,
     }),
   })
 }
@@ -281,6 +287,7 @@ export async function sendOrderConfirmationEmail({
   total: string
 }) {
   const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const overrides = await getEmailTemplateOverrides('order', siteName)
 
   const { OrderConfirmation } = await import('@/emails/OrderConfirmation')
   await sendHtmlEmail({
@@ -295,6 +302,7 @@ export async function sendOrderConfirmationEmail({
       siteName,
       footerText: footerText || undefined,
       logoUrl: logoUrl || undefined,
+      ...overrides,
     }),
   })
 }

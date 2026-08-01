@@ -1,5 +1,6 @@
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { db } from '@/lib/db'
+import { requireAdmin } from '@/lib/auth'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { OrderActions } from './OrderActions'
@@ -23,7 +24,10 @@ function formatPrice(cents: number, currency = 'USD') {
 export default async function OrderDetailPage({ params }: Props) {
   const { orderId } = await params
 
-  const order = await db.order.findUnique({ where: { id: orderId } })
+  const [admin, order] = await Promise.all([
+    requireAdmin(),
+    db.order.findUnique({ where: { id: orderId } }),
+  ])
   if (!order) notFound()
 
   const lineItems: Array<{ name: string; qty: number; priceInCents: number; variantName?: string }> =
@@ -45,6 +49,9 @@ export default async function OrderDetailPage({ params }: Props) {
           <span className={`px-3 py-1 rounded text-sm font-semibold capitalize ${STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-500'}`}>
             {order.status}
           </span>
+          {order.archived && (
+            <span className="px-3 py-1 rounded text-sm font-semibold bg-gray-200 text-gray-600">Archived</span>
+          )}
           <span className="text-sm text-gray-500">{formatPrice(order.totalCents, order.currency)}</span>
           {order.trackingNumber && (
             <span className="text-sm text-gray-500">Tracking: <strong>{order.trackingNumber}</strong></span>
@@ -113,7 +120,13 @@ export default async function OrderDetailPage({ params }: Props) {
         )}
 
         {/* Actions */}
-        <OrderActions orderId={order.id} currentStatus={order.status} currentTracking={order.trackingNumber ?? ''} />
+        <OrderActions
+          orderId={order.id}
+          currentStatus={order.status}
+          currentTracking={order.trackingNumber ?? ''}
+          archived={order.archived}
+          isMasterAdmin={admin.role === 'master_admin'}
+        />
 
       </div>
     </>

@@ -7,9 +7,12 @@ interface PasswordResetProps {
   siteName?: string
   footerText?: string
   logoUrl?: string
+  heading?: string
+  subheading?: string
+  intro?: string
 }
 
-export function PasswordReset({ resetUrl, siteName, footerText, logoUrl }: PasswordResetProps) {
+export function PasswordReset({ resetUrl, siteName, footerText, logoUrl, heading, subheading, intro }: PasswordResetProps) {
   return (
     <EmailBase
       previewText={`Reset your ${siteName ?? 'Gazette'} password — link expires in 30 minutes.`}
@@ -17,14 +20,12 @@ export function PasswordReset({ resetUrl, siteName, footerText, logoUrl }: Passw
       footerText={footerText}
       logoUrl={logoUrl}
     >
-      <Text style={styles.heading}>Password Reset Request</Text>
-      <Text style={styles.subheading}>— From the Office of the Registrar —</Text>
+      <Text style={styles.heading}>{heading ?? 'Password Reset Request'}</Text>
+      <Text style={styles.subheading}>{subheading ?? '— From the Office of the Registrar —'}</Text>
 
       <Text style={styles.body}>Dear Reader,</Text>
       <Text style={styles.body}>
-        A request has been received to reset the password for your{' '}
-        {siteName ?? 'Gazette'} account. If this was indeed your doing, please follow
-        the link below to establish a new password at your earliest convenience.
+        {intro ?? `A request has been received to reset the password for your ${siteName ?? 'Gazette'} account. If this was indeed your doing, please follow the link below to establish a new password at your earliest convenience.`}
       </Text>
 
       <Hr style={styles.divider} />

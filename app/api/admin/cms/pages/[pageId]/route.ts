@@ -12,8 +12,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
       blocks,
     } = await req.json()
 
-    // Delete all existing blocks and recreate from the submitted list
-    await db.contentBlock.deleteMany({ where: { pageId } })
+    // Only touch blocks if the caller actually sent a block list — a lightweight
+    // patch (e.g. just toggling showInNav from the Navigation admin) must never
+    // wipe the page's content just because it didn't mention blocks at all.
+    if (blocks !== undefined) {
+      await db.contentBlock.deleteMany({ where: { pageId } })
+    }
 
     const page = await db.cmsPage.update({
       where: { id: pageId },
@@ -31,16 +35,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
         ...(seoImage !== undefined && { seoImage: seoImage || null }),
         ...(customCss !== undefined && { customCss: customCss || null }),
         ...(customJs !== undefined && { customJs: customJs || null }),
-        blocks: {
-          create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; colSpan?: number; visible?: boolean; blockOrder: number }) => ({
-            blockType: b.blockType,
-            content: b.content ?? null,
-            column: b.column ?? 1,
-            colSpan: b.colSpan ?? 1,
-            visible: b.visible ?? true,
-            blockOrder: b.blockOrder,
-          })),
-        },
+        ...(blocks !== undefined && {
+          blocks: {
+            create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; colSpan?: number; visible?: boolean; blockOrder: number }) => ({
+              blockType: b.blockType,
+              content: b.content ?? null,
+              column: b.column ?? 1,
+              colSpan: b.colSpan ?? 1,
+              visible: b.visible ?? true,
+              blockOrder: b.blockOrder,
+            })),
+          },
+        }),
       },
     })
 

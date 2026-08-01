@@ -1,6 +1,7 @@
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { db } from '@/lib/db'
 import Link from 'next/link'
+import { DeletePageButton } from './DeletePageButton'
 
 export default async function ContentPagesPage() {
   const pages = await db.cmsPage.findMany({
@@ -40,6 +41,7 @@ export default async function ContentPagesPage() {
                   {page.published ? 'Published' : 'Draft'}
                 </span>
                 <Link href={`/admin/content/pages/${page.id}`} className="text-sm text-[#C4AB77] hover:underline shrink-0">Settings</Link>
+                <DeletePageButton pageId={page.id} pageLabel={page.tabLabel} />
                 {page.published && (
                   <Link
                     href={`/?cms_edit=${page.id}`}

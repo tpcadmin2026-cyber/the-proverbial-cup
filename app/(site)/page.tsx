@@ -69,13 +69,14 @@ export default async function SitePage() {
 
   // Load design + masthead settings
   const [
-    siteName, mastheadTitle,
+    siteName, mastheadTitle, mastheadLogoUrl,
     taglineLeft, taglineCenter, taglineRight,
     motto, editionDate, volume, issueNumber, editionLabel, establishedBy,
     currency,
   ] = await Promise.all([
     getSetting<string>('site.name',              'The Victorian Illustrated Gazette'),
     getSetting<string>('design.mastheadTitle',   'The Victorian Illustrated Gazette'),
+    getSetting<string>('design.mastheadLogoUrl', ''),
     getSetting<string>('masthead.taglineLeft',   'PRICE TWO PENCE'),
     getSetting<string>('masthead.taglineCenter', '❧ ✦ ❧'),
     getSetting<string>('masthead.taglineRight',  'FOR KING & COUNTRY'),
@@ -94,6 +95,7 @@ export default async function SitePage() {
       navItems={navItems}
       siteName={siteName}
       mastheadTitle={mastheadTitle}
+      mastheadLogoUrl={mastheadLogoUrl}
       masthead={{ taglineLeft, taglineCenter, taglineRight, motto, editionDate, volume, issueNumber, editionLabel, establishedBy }}
       products={products}
       currency={currency}

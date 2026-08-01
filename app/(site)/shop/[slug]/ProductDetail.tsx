@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useCart } from '@/components/site/CartContext'
+import { RichText } from '@/lib/richText'
 
 interface Variant { id: string; name: string; priceInCents: number | null; inventory: number | null }
 
@@ -83,9 +84,11 @@ export function ProductDetail({ product, currency }: Props) {
 
         {/* Description */}
         {product.description && (
-          <p className="font-baskerville italic text-[#4B4C44] leading-relaxed text-base">
-            {product.description}
-          </p>
+          <RichText
+            as="div"
+            className="font-baskerville italic text-[#4B4C44] leading-relaxed text-base"
+            content={product.description}
+          />
         )}
 
         <div className="border-t border-[#e8e4d0] pt-6 space-y-5">

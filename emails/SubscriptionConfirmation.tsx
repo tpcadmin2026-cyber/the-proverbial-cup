@@ -11,6 +11,9 @@ interface SubscriptionConfirmationProps {
   siteName?: string
   footerText?: string
   logoUrl?: string
+  heading?: string
+  subheading?: string
+  intro?: string
 }
 
 export function SubscriptionConfirmation({
@@ -22,6 +25,9 @@ export function SubscriptionConfirmation({
   siteName,
   footerText,
   logoUrl,
+  heading,
+  subheading,
+  intro,
 }: SubscriptionConfirmationProps) {
   return (
     <EmailBase
@@ -30,16 +36,14 @@ export function SubscriptionConfirmation({
       footerText={footerText}
       logoUrl={logoUrl}
     >
-      <Text style={styles.heading}>Subscription Confirmed</Text>
-      <Text style={styles.subheading}>— Welcome to the Gazette —</Text>
+      <Text style={styles.heading}>{heading ?? 'Subscription Confirmed'}</Text>
+      <Text style={styles.subheading}>{subheading ?? '— Welcome to the Gazette —'}</Text>
 
       <Text style={styles.body}>
         {name ? `Dear ${name},` : 'Dear Reader,'}
       </Text>
       <Text style={styles.body}>
-        We are most pleased to confirm that your subscription to{' '}
-        {siteName ?? 'The Victorian Illustrated Gazette'} has been successfully established.
-        Your first edition will be dispatched at the earliest opportunity.
+        {intro ?? `We are most pleased to confirm that your subscription to ${siteName ?? 'The Victorian Illustrated Gazette'} has been successfully established. Your first edition will be dispatched at the earliest opportunity.`}
       </Text>
 
       <Hr style={styles.divider} />

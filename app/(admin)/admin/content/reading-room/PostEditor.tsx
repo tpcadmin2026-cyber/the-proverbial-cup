@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { RichTextEditor } from '@/components/site/RichTextEditor'
 
 interface Post {
   id: string
@@ -120,16 +121,14 @@ export function PostEditor({ post }: Props) {
       <div>
         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
           Content <span className="text-red-400">*</span>
-          <span className="ml-2 text-gray-400 font-normal normal-case">Use ## for headings, blank line between paragraphs</span>
         </label>
-        <textarea
-          required
-          rows={20}
+        <RichTextEditor
           value={form.content}
-          onChange={(e) => setForm({ ...form, content: e.target.value })}
-          className="w-full border border-gray-200 rounded px-3 py-2 text-sm text-gray-900 font-mono focus:outline-none focus:border-[#C4AB77] resize-y"
-          placeholder="Write your article here…&#10;&#10;## A Section Heading&#10;&#10;Another paragraph…"
+          onChange={(html) => setForm({ ...form, content: html })}
+          placeholder="Write your article here…"
+          minHeight={400}
         />
+        <p className="text-xs text-gray-400 mt-1.5">Formatting is applied with the toolbar above.</p>
       </div>
 
       <div className="flex items-center gap-3">

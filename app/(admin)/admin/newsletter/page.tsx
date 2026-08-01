@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = { title: 'Newsletter' }
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { db } from '@/lib/db'
-import { format } from 'date-fns'
+import { NewsletterTable } from './NewsletterTable'
 
 export default async function NewsletterPage() {
   const [subscribers, totalCount, confirmedCount, unsubCount] = await Promise.all([
@@ -35,46 +35,7 @@ export default async function NewsletterPage() {
             <span className="text-xs text-gray-400">{totalCount} total</span>
           </div>
 
-          {subscribers.length === 0 ? (
-            <div className="p-10 text-center text-sm text-gray-400">
-              No subscribers yet. Sign-ups will appear here as readers enrol at <strong>/newsletter</strong>.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Signed up</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {subscribers.map((sub) => (
-                    <tr key={sub.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-3 font-medium text-gray-900">{sub.email}</td>
-                      <td className="px-5 py-3 text-gray-500">{sub.name ?? '—'}</td>
-                      <td className="px-5 py-3 text-xs text-gray-400 capitalize">{sub.source}</td>
-                      <td className="px-5 py-3">
-                        {sub.unsubscribedAt ? (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">Unsubscribed</span>
-                        ) : sub.confirmed ? (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">Confirmed</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Pending</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
-                        {format(sub.createdAt, 'dd MMM yyyy')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <NewsletterTable subscribers={subscribers} />
         </div>
 
       </div>

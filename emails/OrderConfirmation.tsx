@@ -17,6 +17,9 @@ interface OrderConfirmationProps {
   siteName?: string
   footerText?: string
   logoUrl?: string
+  heading?: string
+  subheading?: string
+  intro?: string
 }
 
 const ink  = '#1a0a00'
@@ -31,6 +34,9 @@ export function OrderConfirmation({
   siteName,
   footerText,
   logoUrl,
+  heading,
+  subheading,
+  intro,
 }: OrderConfirmationProps) {
   return (
     <EmailBase
@@ -39,15 +45,14 @@ export function OrderConfirmation({
       siteName={siteName}
       footerText={footerText}
     >
-      <Text style={styles.heading}>Order Confirmed</Text>
-      <Text style={styles.subheading}>— Receipt of Purchase —</Text>
+      <Text style={styles.heading}>{heading ?? 'Order Confirmed'}</Text>
+      <Text style={styles.subheading}>{subheading ?? '— Receipt of Purchase —'}</Text>
 
       <Text style={styles.body}>
         {name ? `Dear ${name},` : 'Dear Customer,'}
       </Text>
       <Text style={styles.body}>
-        We have received your order and are preparing it for despatch forthwith.
-        A summary of your purchase is recorded below for your records.
+        {intro ?? 'We have received your order and are preparing it for despatch forthwith. A summary of your purchase is recorded below for your records.'}
       </Text>
 
       <Hr style={styles.divider} />

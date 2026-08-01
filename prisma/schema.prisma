@@ -291,6 +291,7 @@ model Order {
   totalCents      Int
   currency        String   @default("GBP")
   status          String   @default("pending") // pending | paid | fulfilled | cancelled | refunded
+  archived        Boolean  @default(false)
   stripePaymentId String?
   shippingAddress String?  // JSON
   trackingNumber  String?
@@ -542,12 +543,34 @@ model ChatMessage {
 // ─────────────────────────────────────────────────────────────────────────────
 // RECOMMENDATION QUIZ
 // ─────────────────────────────────────────────────────────────────────────────
+model Quiz {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String   // internal name, shown in the admin quiz list
+  heading       String   @default("Find Your Perfect Subscription")
+  subheading    String?  @db.Text
+  resultHeading String   @default("Our Recommendation for You")
+  resultSubtext String?  @db.Text
+  visible       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  questions     QuizQuestion[]
+}
+
 model QuizQuestion {
   id       String       @id @default(cuid())
+  // Nullable so existing questions from before multi-quiz support keep working —
+  // the admin quiz list self-heals any orphaned (quizId-less) questions into a
+  // "Default Quiz" the first time it loads, rather than requiring a hand-run migration.
+  quizId   String?
+  quiz     Quiz?        @relation(fields: [quizId], references: [id], onDelete: Cascade)
   text     String
   order    Int
   active   Boolean      @default(true)
   answers  QuizAnswer[]
+
+  @@index([quizId])
 }
 
 model QuizAnswer {

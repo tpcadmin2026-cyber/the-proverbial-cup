@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { NavItem } from '@prisma/client'
 
-interface CmsPageRef { id: string; tabLabel: string; tabNumeral: string; pageOrder: number; published: boolean }
+interface CmsPageRef { id: string; tabLabel: string; tabNumeral: string; pageOrder: number; published: boolean; showInNav: boolean }
 
 interface Props {
   navItems: NavItem[]
@@ -22,14 +22,15 @@ const QUICK_LINKS = [
   { label: 'My Account',     numeral: '◈', href: '/account'     },
 ]
 
-export function NavEditor({ navItems: initial, pages }: Props) {
+export function NavEditor({ navItems: initial, pages: initialPages }: Props) {
   const router = useRouter()
   const [items, setItems] = useState<NavItem[]>(initial)
+  const [pages, setPages] = useState<CmsPageRef[]>(initialPages)
   const [saving, setSaving] = useState<string | null>(null)
 
   // All tabs in the order they'll appear: pages + nav items, sorted by their order values
   const allTabs = [
-    ...pages.map(p => ({ kind: 'page' as const, id: p.id, label: p.tabLabel, numeral: p.tabNumeral, order: p.pageOrder, published: p.published })),
+    ...pages.map(p => ({ kind: 'page' as const, id: p.id, label: p.tabLabel, numeral: p.tabNumeral, order: p.pageOrder, published: p.published, showInNav: p.showInNav })),
     ...items.map(n => ({ kind: 'link' as const, id: n.id, label: n.label, numeral: n.numeral, order: n.navOrder, href: n.href, visible: n.visible })),
   ].sort((a, b) => a.order - b.order)
 
@@ -42,6 +43,20 @@ export function NavEditor({ navItems: initial, pages }: Props) {
     })
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))
     setSaving(null)
+  }
+
+  // Lightweight — toggles nav visibility on a CmsPage without touching its content
+  // blocks (the pages API route only rewrites blocks when a block list is sent).
+  async function togglePageNav(id: string, showInNav: boolean) {
+    setSaving(id)
+    await fetch(`/api/admin/cms/pages/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ showInNav }),
+    })
+    setPages(prev => prev.map(p => p.id === id ? { ...p, showInNav } : p))
+    setSaving(null)
+    router.refresh()
   }
 
   async function remove(id: string) {
@@ -87,26 +102,73 @@ export function NavEditor({ navItems: initial, pages }: Props) {
           <div className="text-xs font-semibold text-[#C4AB77] uppercase tracking-widest mb-3">Tab order preview</div>
           <div className="text-xs text-[#C4AB77] mb-3">This shows how all tabs will appear in the navigation, left to right. Newspaper pages are shown in grey.</div>
           <div className="flex flex-wrap gap-2">
-            {allTabs.map(tab => (
-              <div
-                key={tab.id}
-                className={`px-3 py-1.5 rounded text-xs font-medium border ${
-                  tab.kind === 'page'
-                    ? 'bg-[#f5f2e8] border-[#c8c4a8] text-[#4B4C44]'
-                    : tab.visible
-                    ? 'bg-[#35291C] border-[#35291C] text-[#E8E6D8]'
-                    : 'bg-white border-dashed border-[#c8c4a8] text-[#C4AB77]'
-                }`}
-              >
-                <span className="opacity-60 mr-1">{tab.numeral}</span>
-                {tab.label}
-                {tab.kind === 'page' && !tab.published && <span className="ml-1 opacity-50">(draft)</span>}
-                {tab.kind === 'link' && !tab.visible && <span className="ml-1 opacity-50">(hidden)</span>}
-              </div>
-            ))}
+            {allTabs.map(tab => {
+              const pageHidden = tab.kind === 'page' && (!tab.published || !tab.showInNav)
+              return (
+                <div
+                  key={tab.id}
+                  className={`px-3 py-1.5 rounded text-xs font-medium border ${
+                    tab.kind === 'page'
+                      ? pageHidden
+                        ? 'bg-white border-dashed border-[#c8c4a8] text-[#C4AB77]'
+                        : 'bg-[#f5f2e8] border-[#c8c4a8] text-[#4B4C44]'
+                      : tab.visible
+                      ? 'bg-[#35291C] border-[#35291C] text-[#E8E6D8]'
+                      : 'bg-white border-dashed border-[#c8c4a8] text-[#C4AB77]'
+                  }`}
+                >
+                  <span className="opacity-60 mr-1">{tab.numeral}</span>
+                  {tab.label}
+                  {tab.kind === 'page' && !tab.published && <span className="ml-1 opacity-50">(draft)</span>}
+                  {tab.kind === 'page' && tab.published && !tab.showInNav && <span className="ml-1 opacity-50">(hidden from nav)</span>}
+                  {tab.kind === 'link' && !tab.visible && <span className="ml-1 opacity-50">(hidden)</span>}
+                </div>
+              )
+            })}
             {allTabs.length === 0 && <span className="text-xs text-[#C4AB77] italic">No tabs yet.</span>}
           </div>
         </div>
+      </div>
+
+      {/* Newspaper pages — add/remove from nav independent of publish state */}
+      <div className="bg-white border border-[#c8c4a8] rounded-lg overflow-hidden">
+        <div className="h-0.5 bg-gradient-to-r from-[#35291C] via-[#C4AB77] to-[#35291C]" />
+        <div className="px-5 py-4 border-b border-[#e8e4d0]">
+          <div className="text-xs font-semibold text-[#C4AB77] uppercase tracking-widest">Newspaper pages</div>
+          <div className="text-xs text-[#C4AB77] mt-0.5">Add or remove a page's tab from the nav bar. A page still needs to be Published for its tab to actually appear — toggling this ahead of time is fine, it'll take effect the moment you publish.</div>
+        </div>
+        {pages.length === 0 ? (
+          <div className="px-5 py-6 text-center text-sm font-baskerville italic text-[#C4AB77]">No pages yet.</div>
+        ) : (
+          <div className="divide-y divide-[#f5f2e8]">
+            {pages.sort((a, b) => a.pageOrder - b.pageOrder).map(page => (
+              <div key={page.id} className="px-5 py-3 flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => togglePageNav(page.id, !page.showInNav)}
+                  title={page.showInNav ? 'Remove from nav' : 'Add to nav'}
+                  className={`flex-shrink-0 w-8 h-8 rounded flex items-center justify-center border transition-colors ${
+                    page.showInNav ? 'border-green-300 bg-green-50 text-green-700' : 'border-[#c8c4a8] bg-white text-[#C4AB77]'
+                  }`}
+                >
+                  {page.showInNav ? (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  ) : (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  )}
+                </button>
+
+                <span className="w-8 text-center text-sm text-[#C4AB77] flex-shrink-0">{page.tabNumeral}</span>
+                <span className="flex-1 min-w-32 text-sm text-[#35291C]">{page.tabLabel}</span>
+
+                <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${page.published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {page.published ? 'Published' : 'Draft'}
+                </span>
+
+                {saving === page.id && <span className="text-xs text-[#C4AB77] italic">Saving…</span>}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick-add common pages */}

@@ -1,18 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import type { QuizQuestion, QuizAnswer, SubscriptionPlan } from '@prisma/client'
 
 type QuestionWithAnswers = QuizQuestion & { answers: QuizAnswer[] }
 
 interface Props {
+  quizId: string
   questions: QuestionWithAnswers[]
   plans: SubscriptionPlan[]
 }
 
-export function QuizEditor({ questions: initial, plans }: Props) {
-  const router = useRouter()
+export function QuizEditor({ quizId, questions: initial, plans }: Props) {
   const [questions, setQuestions] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(initial[0]?.id ?? null)
@@ -22,7 +21,7 @@ export function QuizEditor({ questions: initial, plans }: Props) {
     const res = await fetch('/api/admin/quiz/questions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'New question' }),
+      body: JSON.stringify({ text: 'New question', quizId }),
     })
     const q = await res.json()
     setQuestions([...questions, { ...q, answers: [] }])

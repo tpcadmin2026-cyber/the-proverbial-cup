@@ -5,6 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import { db } from '@/lib/db'
 import { getSetting } from '@/lib/settings'
 import { isEnabled } from '@/lib/features'
+import { RichText } from '@/lib/richText'
 import { format } from 'date-fns'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -45,9 +46,6 @@ export default async function ReadingRoomPostPage({ params }: { params: Promise<
   const post = await db.readingRoomPost.findUnique({ where: { slug, published: true } })
   if (!post) notFound()
 
-  // Render content — support basic ## headings and paragraphs
-  const paragraphs = post.content.split('\n\n').filter(Boolean)
-
   return (
     <div
       className="min-h-screen py-16 px-6"
@@ -82,19 +80,7 @@ export default async function ReadingRoomPostPage({ params }: { params: Promise<
           <div className="h-px flex-1 bg-[#C4AB77]" />
         </div>
 
-        <article className="prose-gazette">
-          {paragraphs.map((para, i) => {
-            if (para.startsWith('## ')) {
-              return <h2 key={i} className="font-playfair text-xl text-[#35291C] mt-8 mb-3">{para.slice(3)}</h2>
-            }
-            if (para.startsWith('### ')) {
-              return <h3 key={i} className="font-playfair text-lg text-[#35291C] mt-6 mb-2">{para.slice(4)}</h3>
-            }
-            return (
-              <p key={i} className="font-baskerville text-[#35291C] leading-loose mb-4 text-[1.05rem]">{para}</p>
-            )
-          })}
-        </article>
+        <RichText as="div" className="prose-gazette" content={post.content} />
 
         <div className="flex items-center gap-3 my-10 justify-center">
           <div className="h-px flex-1 bg-[#C4AB77]" />

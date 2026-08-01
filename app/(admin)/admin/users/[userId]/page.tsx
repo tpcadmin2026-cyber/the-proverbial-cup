@@ -97,7 +97,7 @@ export default async function UserDetailPage({ params }: Props) {
 
         {/* Editable fields */}
         <UserEditor
-          user={{ id: user.id, name: user.name ?? '', role: user.role }}
+          user={{ id: user.id, name: user.name ?? '', role: user.role, emailVerified: !!user.emailVerified }}
           plans={plans}
           subscription={user.subscription ? { planId: user.subscription.planId, status: user.subscription.status } : null}
         />

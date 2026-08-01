@@ -119,6 +119,10 @@ body {
   font-size: clamp(1.6rem, 3.5vw, 3.4rem);
   color: var(--ink); line-height: 1; letter-spacing: 2px;
 }
+.gazette-logo {
+  display: inline-block; height: clamp(2.2rem, 5vw, 4.2rem);
+  max-width: 90%; width: auto; object-fit: contain;
+}
 .tagline-row {
   display: flex; justify-content: space-between; align-items: center;
   font-family: 'Libre Baskerville', serif;
@@ -157,6 +161,27 @@ body {
   letter-spacing: 3px; text-transform: uppercase; color: var(--red);
   border-bottom: 1px solid var(--red); margin-bottom: 5px; padding-bottom: 2px;
 }
+
+/* ── Reading Room / member article prose ──────────────────────────────────────── */
+.prose-gazette h1, .prose-gazette h2 {
+  font-family: 'Playfair Display', serif; color: #35291C;
+  font-size: 1.25rem; margin: 2rem 0 0.75rem;
+}
+.prose-gazette h3 {
+  font-family: 'Playfair Display', serif; color: #35291C;
+  font-size: 1.125rem; margin: 1.5rem 0 0.5rem;
+}
+.prose-gazette p {
+  font-family: 'Libre Baskerville', serif; color: #35291C;
+  line-height: 1.9; margin-bottom: 1rem; font-size: 1.05rem;
+}
+.prose-gazette ul, .prose-gazette ol {
+  font-family: 'Libre Baskerville', serif; color: #35291C;
+  line-height: 1.9; margin: 0 0 1rem 1.4em; font-size: 1.05rem;
+}
+.prose-gazette ul { list-style: disc; }
+.prose-gazette ol { list-style: decimal; }
+.prose-gazette a { color: #7A564C; text-decoration: underline; }
 
 /* ── Admin panel ────────────────────────────────────────────────────────────── */
 /* Reset the Victorian body background for the entire admin section */

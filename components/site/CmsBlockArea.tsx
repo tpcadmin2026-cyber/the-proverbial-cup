@@ -275,15 +275,23 @@ function spanStartCol(block: EditBlock, columnCount: number): { start: number; s
  * cover (e.g. a 2-column image beside a 1-column text sidebar) — and a row only ends
  * when something would actually overlap what's already been placed in it.
  */
+function freshRow(columnCount: number): BlockRow {
+  return { spans: [], columns: Array.from({ length: columnCount }, () => []) }
+}
+
+function isEmptyRow(row: BlockRow): boolean {
+  return row.spans.length === 0 && row.columns.every((c) => c.length === 0)
+}
+
 function groupBlocksIntoRows(blocks: EditBlock[], columnCount: number): BlockRow[] {
   const rows: BlockRow[] = []
-  let current: BlockRow = { spans: [], columns: Array.from({ length: columnCount }, () => []) }
+  let current: BlockRow = freshRow(columnCount)
   let spanClaimed = new Set<number>()  // columns reserved by a span in the current row
   let normalUsed = new Set<number>()   // columns that already hold a normal block in the current row
 
   function flush() {
     rows.push(current)
-    current = { spans: [], columns: Array.from({ length: columnCount }, () => []) }
+    current = freshRow(columnCount)
     spanClaimed = new Set()
     normalUsed = new Set()
   }
@@ -301,9 +309,12 @@ function groupBlocksIntoRows(blocks: EditBlock[], columnCount: number): BlockRow
       normalUsed.add(start)
     }
   }
-  // Always end with a row (even if empty) — the static view renders an empty one as
-  // nothing, but the editor relies on it always existing as a drop target.
-  flush()
+  // Always end with a genuine empty row as a drop target for the editor — the static
+  // view renders an empty row as nothing, so this is harmless there. Without this, a
+  // page ending in a full-width span (e.g. Featured products) had no row left for
+  // "+ Add block" to render into, since every column in the span's own row was claimed.
+  rows.push(current)
+  if (!isEmptyRow(current)) rows.push(freshRow(columnCount))
   return rows
 }
 

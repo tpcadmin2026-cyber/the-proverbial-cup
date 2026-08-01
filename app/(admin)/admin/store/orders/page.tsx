@@ -3,16 +3,30 @@ import { db } from '@/lib/db'
 import Link from 'next/link'
 import { format } from 'date-fns'
 
-export default async function OrdersPage() {
-  const orders = await db.order.findMany({ orderBy: { createdAt: 'desc' }, take: 50 })
+interface Props {
+  searchParams: Promise<{ archived?: string }>
+}
+
+export default async function OrdersPage({ searchParams }: Props) {
+  const { archived: showArchived } = await searchParams
+  const archived = showArchived === '1'
+  const orders = await db.order.findMany({ where: { archived }, orderBy: { createdAt: 'desc' }, take: 50 })
 
   return (
     <>
       <AdminHeader title="Orders" subtitle="All customer orders — view status, add tracking, and process refunds." />
       <div className="p-8 max-w-4xl">
+        <div className="flex items-center justify-end mb-4">
+          <Link
+            href={archived ? '/admin/store/orders' : '/admin/store/orders?archived=1'}
+            className="text-xs text-[#C4AB77] hover:underline"
+          >
+            {archived ? '← Back to active orders' : 'View archived orders →'}
+          </Link>
+        </div>
         {orders.length === 0 ? (
           <div className="bg-white rounded-lg border border-gray-200 p-10 text-center text-sm text-gray-400">
-            No orders yet. Orders will appear here once customers start purchasing.
+            {archived ? 'No archived orders.' : 'No orders yet. Orders will appear here once customers start purchasing.'}
           </div>
         ) : (
           <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">

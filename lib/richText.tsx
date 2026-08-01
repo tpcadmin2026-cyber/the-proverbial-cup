@@ -78,6 +78,16 @@ function looksLikeHtml(text: string): boolean {
   return /<\/?[a-z][\s\S]*>/i.test(text)
 }
 
+/** Strips stored block content (HTML or legacy markdown-lite) down to plain text — for card
+ * previews, SEO descriptions, or anywhere truncation/line-clamping needs real text, not markup. */
+export function richTextToPlainText(content: string): string {
+  if (!content) return ''
+  const stripped = looksLikeHtml(content)
+    ? content.replace(/<[^>]+>/g, ' ')
+    : content.replace(/[*_#]/g, '')
+  return stripped.replace(/\s+/g, ' ').trim()
+}
+
 // ── Legacy markdown-lite renderer (pre-rich-text-editor content) ─────────────
 
 function legacyInlineHtml(text: string): string {
@@ -91,6 +101,12 @@ function legacyInlineHtml(text: string): string {
 function legacyBodyHtml(text: string): string {
   return text.split(/\n\n+/).map((para) => {
     const lines = para.split('\n').filter(Boolean)
+    if (lines.length === 1 && /^###\s+/.test(lines[0])) {
+      return `<h3>${legacyInlineHtml(lines[0].replace(/^###\s+/, ''))}</h3>`
+    }
+    if (lines.length === 1 && /^##\s+/.test(lines[0])) {
+      return `<h2>${legacyInlineHtml(lines[0].replace(/^##\s+/, ''))}</h2>`
+    }
     if (lines.every((l) => /^[-*•]\s/.test(l))) {
       return `<ul>${lines.map((l) => `<li>${legacyInlineHtml(l.replace(/^[-*•]\s+/, ''))}</li>`).join('')}</ul>`
     }

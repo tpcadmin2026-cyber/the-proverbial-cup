@@ -33,6 +33,7 @@ interface Props {
   navItems: NavItem[]
   siteName: string
   mastheadTitle: string
+  mastheadLogoUrl?: string
   masthead?: Masthead
   products?: ProductSummary[]
   currency?: string
@@ -46,7 +47,7 @@ const DEFAULT_PAGES: PageWithBlocks[] = [
 ]
 
 
-export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, masthead: mh, products = [], currency = 'USD' }: Props) {
+export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, mastheadLogoUrl, masthead: mh, products = [], currency = 'USD' }: Props) {
   const m = { ...DEFAULT_MASTHEAD, ...mh }
   const activePages = pages.length > 0 ? pages : DEFAULT_PAGES
   const navPages = activePages.map((p) => ({ id: p.id, tabNumeral: p.tabNumeral, tabLabel: p.tabLabel, pageOrder: p.pageOrder, showInNav: p.showInNav }))
@@ -60,7 +61,12 @@ export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, ma
             <span className="dingbat">{m.taglineCenter}</span>
             <span>{m.taglineRight}</span>
           </div>
-          <div className="gazette-name">{mastheadTitle}</div>
+          {mastheadLogoUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={mastheadLogoUrl} alt={mastheadTitle} className="gazette-logo" />
+          ) : (
+            <div className="gazette-name">{mastheadTitle}</div>
+          )}
           <div className="tagline-row">
             <span style={{ fontStyle: 'italic' }}>{m.motto}</span>
             <span />

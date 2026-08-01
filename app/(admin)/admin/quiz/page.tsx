@@ -1,26 +1,26 @@
 import type { Metadata } from 'next'
-export const metadata: Metadata = { title: 'Quiz' }
+export const metadata: Metadata = { title: 'Quizzes' }
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { db } from '@/lib/db'
-import { QuizEditor } from './QuizEditor'
+import { ensureDefaultQuiz } from '@/lib/quizMigration'
+import { QuizList } from './QuizList'
 
 export default async function QuizAdminPage() {
-  const [questions, plans] = await Promise.all([
-    db.quizQuestion.findMany({
-      orderBy: { order: 'asc' },
-      include: { answers: { orderBy: { order: 'asc' } } },
-    }),
-    db.subscriptionPlan.findMany({ where: { visible: true }, orderBy: { displayOrder: 'asc' } }),
-  ])
+  await ensureDefaultQuiz()
+
+  const quizzes = await db.quiz.findMany({
+    orderBy: { createdAt: 'asc' },
+    include: { _count: { select: { questions: true } } },
+  })
 
   return (
     <div>
       <AdminHeader
-        title="Recommendation Quiz"
-        subtitle="Manage questions and answers that recommend the right subscription to each visitor."
+        title="Quizzes"
+        subtitle="Build as many recommendation quizzes as you like — each gets its own shareable link."
       />
       <div className="p-6">
-        <QuizEditor questions={questions} plans={plans} />
+        <QuizList quizzes={quizzes} />
       </div>
     </div>
   )

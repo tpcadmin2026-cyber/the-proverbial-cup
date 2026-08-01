@@ -78,3 +78,11 @@ export async function requireSuperAdmin() {
   }
   return user
 }
+
+export async function requireMasterAdmin() {
+  const user = await getCurrentUser()
+  if (!user || user.role !== 'master_admin') {
+    throw new Error('Unauthorised')
+  }
+  return user
+}

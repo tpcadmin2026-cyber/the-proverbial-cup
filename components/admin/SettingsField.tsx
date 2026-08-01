@@ -3,6 +3,8 @@
 // A single admin settings field — renders the correct input type for every setting.
 // Designed for non-technical users: plain English labels, always visible helper text.
 
+import { useRef, useState } from 'react'
+
 interface Option { label: string; value: string }
 
 interface SettingsFieldProps {
@@ -17,6 +19,32 @@ interface SettingsFieldProps {
 
 export function SettingsField({ settingKey, label, helpText, inputType, value, options, onChange }: SettingsFieldProps) {
   const id = `setting-${settingKey}`
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadError('')
+    try {
+      const presignRes = await fetch('/api/admin/media/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      })
+      const { uploadUrl, publicUrl, error: presignError } = await presignRes.json()
+      if (presignError) throw new Error(presignError)
+      await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+      onChange(settingKey, publicUrl)
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   return (
     <div className="py-4 border-b border-gray-100 last:border-0">
@@ -85,16 +113,39 @@ export function SettingsField({ settingKey, label, helpText, inputType, value, o
       )}
 
       {inputType === 'image' && (
-        <div className="flex items-center gap-3">
-          {!!value && <img src={String(value)} alt={label} className="h-10 w-10 rounded object-cover border border-gray-200" />}
-          <input
-            id={id}
-            type="url"
-            value={String(value || '')}
-            onChange={(e) => onChange(settingKey, e.target.value)}
-            placeholder="Paste image URL or upload below"
-            className="flex-1 rounded border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4AB77]"
-          />
+        <div>
+          <div className="flex items-center gap-3">
+            {!!value && <img src={String(value)} alt={label} className="h-10 w-10 rounded object-cover border border-gray-200" />}
+            <input
+              id={id}
+              type="url"
+              value={String(value || '')}
+              onChange={(e) => onChange(settingKey, e.target.value)}
+              placeholder="Paste image URL, or upload a file"
+              className="flex-1 rounded border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C4AB77]"
+            />
+            <label className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded cursor-pointer transition-colors ${uploading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#1a0a00] text-[#f9f0dc] hover:bg-[#35291C]'}`}>
+              {uploading ? 'Uploading…' : '⬆ Upload'}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+            {!!value && (
+              <button
+                type="button"
+                onClick={() => onChange(settingKey, '')}
+                className="shrink-0 text-xs text-red-400 hover:text-red-600"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {uploadError && <p className="text-xs text-red-600 mt-1.5">{uploadError}</p>}
         </div>
       )}
 

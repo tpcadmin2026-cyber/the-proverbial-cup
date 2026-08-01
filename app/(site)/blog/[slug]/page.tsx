@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { db } from '@/lib/db'
 import { getSetting } from '@/lib/settings'
 import { isEnabled } from '@/lib/features'
+import { RichText } from '@/lib/richText'
 import { format } from 'date-fns'
 
 const GRAIN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.62' numOctaves='4' stitchTiles='stitch' result='noise'/%3E%3CfeColorMatrix type='saturate' values='0' in='noise' result='gray'/%3E%3CfeComponentTransfer in='gray'%3E%3CfeFuncR type='linear' slope='3.2' intercept='-1.1'/%3E%3CfeFuncG type='linear' slope='3.2' intercept='-1.1'/%3E%3CfeFuncB type='linear' slope='3.2' intercept='-1.1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3C/defs%3E%3Crect width='400' height='400' fill='%23E8E6D8'/%3E%3Crect width='400' height='400' fill='rgba(140,120,80,0.72)' filter='url(%23grain)' style='mix-blend-mode:overlay'/%3E%3C/svg%3E")`
@@ -38,9 +39,6 @@ export default async function BlogPostPage({ params }: Props) {
 
   const tagList = post.tags ? post.tags.split(',').map((t) => t.trim()).filter(Boolean) : []
   const date = post.publishedAt ?? post.createdAt
-
-  // Render content
-  const contentHtml = renderContent(post.content)
 
   // Related posts (same category, exclude current)
   const related = post.category
@@ -105,9 +103,10 @@ export default async function BlogPostPage({ params }: Props) {
             </div>
 
             {/* Body */}
-            <div
+            <RichText
+              as="div"
               className="font-baskerville text-[#35291C] leading-relaxed space-y-4"
-              dangerouslySetInnerHTML={{ __html: contentHtml }}
+              content={post.content}
             />
 
             {/* Tags */}
@@ -158,42 +157,4 @@ export default async function BlogPostPage({ params }: Props) {
       </div>
     </div>
   )
-}
-
-function renderContent(content: string): string {
-  if (!content.trim()) return ''
-  const lines = content.split('\n')
-  const html: string[] = []
-  let listOpen = false
-
-  function closeList() {
-    if (listOpen) { html.push('</ul>'); listOpen = false }
-  }
-
-  function inline(text: string): string {
-    return text
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/`(.+?)`/g, '<code style="background:#f5f2e8;padding:0 3px;border-radius:3px;font-size:0.9em;font-family:monospace">$1</code>')
-  }
-
-  for (const line of lines) {
-    if (line.startsWith('### ')) {
-      closeList()
-      html.push(`<h3 style="font-family:Georgia,serif;font-size:1.15rem;font-weight:700;margin:1.4em 0 0.4em;color:#35291C">${inline(line.slice(4))}</h3>`)
-    } else if (line.startsWith('## ')) {
-      closeList()
-      html.push(`<h2 style="font-family:Georgia,serif;font-size:1.5rem;font-weight:700;margin:1.8em 0 0.5em;color:#35291C;border-bottom:1px solid #e8e4d0;padding-bottom:0.3em">${inline(line.slice(3))}</h2>`)
-    } else if (line.startsWith('- ')) {
-      if (!listOpen) { html.push('<ul style="padding-left:1.5em;margin:0.8em 0;list-style:disc">'); listOpen = true }
-      html.push(`<li style="margin:0.3em 0;line-height:1.7">${inline(line.slice(2))}</li>`)
-    } else if (line.trim() === '') {
-      closeList()
-    } else {
-      closeList()
-      html.push(`<p style="margin:0.8em 0;line-height:1.8;font-size:1.05rem">${inline(line)}</p>`)
-    }
-  }
-  closeList()
-  return html.join('\n')
 }

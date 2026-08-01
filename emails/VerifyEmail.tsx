@@ -8,9 +8,12 @@ interface VerifyEmailProps {
   siteName?: string
   footerText?: string
   logoUrl?: string
+  heading?: string
+  subheading?: string
+  intro?: string
 }
 
-export function VerifyEmail({ name, verifyUrl, siteName, footerText, logoUrl }: VerifyEmailProps) {
+export function VerifyEmail({ name, verifyUrl, siteName, footerText, logoUrl, heading, subheading, intro }: VerifyEmailProps) {
   return (
     <EmailBase
       previewText={`Verify your ${siteName ?? 'Gazette'} account — one click and you're in.`}
@@ -18,15 +21,14 @@ export function VerifyEmail({ name, verifyUrl, siteName, footerText, logoUrl }: 
       footerText={footerText}
       logoUrl={logoUrl}
     >
-      <Text style={styles.heading}>Confirm Your Correspondence</Text>
-      <Text style={styles.subheading}>— Email Verification —</Text>
+      <Text style={styles.heading}>{heading ?? 'Confirm Your Correspondence'}</Text>
+      <Text style={styles.subheading}>{subheading ?? '— Email Verification —'}</Text>
 
       <Text style={styles.body}>
         {name ? `Dear ${name},` : 'Dear Reader,'}
       </Text>
       <Text style={styles.body}>
-        Welcome to {siteName ?? 'The Victorian Illustrated Gazette'}. We are delighted to have you among our subscribers.
-        Before we may proceed, we ask that you confirm your correspondence address by following the link below.
+        {intro ?? `Welcome to ${siteName ?? 'The Victorian Illustrated Gazette'}. We are delighted to have you among our subscribers. Before we may proceed, we ask that you confirm your correspondence address by following the link below.`}
       </Text>
 
       <Hr style={styles.divider} />

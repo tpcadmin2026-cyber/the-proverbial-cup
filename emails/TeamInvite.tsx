@@ -9,6 +9,8 @@ interface TeamInviteProps {
   siteName?: string
   footerText?: string
   logoUrl?: string
+  heading?: string
+  subheading?: string
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -18,7 +20,7 @@ const ROLE_LABELS: Record<string, string> = {
   employee: 'Editorial Staff',
 }
 
-export function TeamInvite({ inviterName, role, acceptUrl, siteName, footerText, logoUrl }: TeamInviteProps) {
+export function TeamInvite({ inviterName, role, acceptUrl, siteName, footerText, logoUrl, heading, subheading }: TeamInviteProps) {
   const roleLabel = ROLE_LABELS[role] ?? role
 
   return (
@@ -28,8 +30,8 @@ export function TeamInvite({ inviterName, role, acceptUrl, siteName, footerText,
       footerText={footerText}
       logoUrl={logoUrl}
     >
-      <Text style={styles.heading}>You Have Been Invited</Text>
-      <Text style={styles.subheading}>— A Staff Appointment —</Text>
+      <Text style={styles.heading}>{heading ?? 'You Have Been Invited'}</Text>
+      <Text style={styles.subheading}>{subheading ?? '— A Staff Appointment —'}</Text>
 
       <Text style={styles.body}>Dear Colleague,</Text>
       <Text style={styles.body}>
