@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getStripeAsync } from '@/lib/stripe'
+import { getStripeAsync, getStripeWebhookSecret } from '@/lib/stripe'
 import { logChange } from '@/lib/changelog'
 import { trackEvent } from '@/lib/posthog'
 import { sendSubscriptionConfirmationEmail, sendOrderConfirmationEmail, sendNewOrderAdminEmail } from '@/lib/auth-utils'
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+  const webhookSecret = await getStripeWebhookSecret()
 
   let event: Stripe.Event
 

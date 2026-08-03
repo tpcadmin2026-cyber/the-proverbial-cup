@@ -2,9 +2,23 @@ export const dynamic = 'force-dynamic'
 
 import { AdminHeader } from '@/components/admin/AdminHeader'
 import { SettingsGroupPage } from '@/components/admin/SettingsGroupPage'
+import { db } from '@/lib/db'
 import { getGroupSettings } from '../_shared'
 
+// Credential-shaped fields that predate the masked "secret" input type — self-heals
+// existing rows (seeded as plain "text") to the masked type the first time this
+// page loads, so nothing needs a hand-run migration on already-deployed databases.
+const SECRET_KEYS = [
+  'email.apiKey', 'r2.accessKeyId', 'r2.secretKey', 'vercel.token',
+  'b2.keyId', 'b2.appKey', 'stripe.secretKey', 'ai.apiKey',
+  'analytics.posthogKey', 'stripe.webhookSecret',
+]
+
 export default async function ConnectionsSettingsPage() {
+  await db.setting.updateMany({
+    where: { key: { in: SECRET_KEYS }, inputType: { not: 'secret' } },
+    data: { inputType: 'secret' },
+  })
 
   // Combine all connection-related settings
   const [backupRows, changelogRows, aiRows, analyticsRows, r2Rows, vercelRows, b2Rows, stripeRows, emailRows] = await Promise.all([

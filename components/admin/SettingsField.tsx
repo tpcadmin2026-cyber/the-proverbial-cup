@@ -22,6 +22,14 @@ export function SettingsField({ settingKey, label, helpText, inputType, value, o
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [revealed, setRevealed] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  function copyValue() {
+    navigator.clipboard.writeText(String(value || ''))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -146,6 +154,35 @@ export function SettingsField({ settingKey, label, helpText, inputType, value, o
             )}
           </div>
           {uploadError && <p className="text-xs text-red-600 mt-1.5">{uploadError}</p>}
+        </div>
+      )}
+
+      {inputType === 'secret' && (
+        <div className="flex items-center gap-2">
+          <input
+            id={id}
+            type={revealed ? 'text' : 'password'}
+            value={String(value || '')}
+            onChange={(e) => onChange(settingKey, e.target.value)}
+            placeholder="Not set"
+            autoComplete="off"
+            className="flex-1 min-w-0 rounded border border-gray-200 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C4AB77]"
+          />
+          <button
+            type="button"
+            onClick={() => setRevealed((r) => !r)}
+            className="shrink-0 px-3 py-2 text-xs font-semibold border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+          >
+            {revealed ? 'Hide' : 'Show'}
+          </button>
+          <button
+            type="button"
+            onClick={copyValue}
+            disabled={!value}
+            className="shrink-0 px-3 py-2 text-xs font-semibold border border-gray-200 rounded hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {copied ? '✓ Copied' : 'Copy'}
+          </button>
         </div>
       )}
 

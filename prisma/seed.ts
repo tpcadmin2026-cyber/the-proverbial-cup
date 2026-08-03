@@ -59,7 +59,7 @@ const DEFAULT_SETTINGS = [
 
   // Email / notifications
   { key: 'email.provider',    group: 'email', label: 'Email provider',       helpText: 'Which service sends your emails.', inputType: 'select', value: '"resend"', options: '[{"label":"Resend","value":"resend"},{"label":"Mailgun","value":"mailgun"},{"label":"SendGrid","value":"sendgrid"},{"label":"SMTP","value":"smtp"}]' },
-  { key: 'email.apiKey',      group: 'email', label: 'API key',              helpText: 'Your email provider\'s API key. Stored securely.', inputType: 'text', value: '""' },
+  { key: 'email.apiKey',      group: 'email', label: 'API key',              helpText: 'Your email provider\'s API key. Stored securely.', inputType: 'secret', value: '""' },
   { key: 'email.fromName',    group: 'email', label: 'Sender name',          helpText: 'The name that appears in the "From" field of emails you send.', inputType: 'text', value: '"My Site"' },
   { key: 'email.fromAddress', group: 'email', label: 'Sender email address', helpText: 'The email address your messages are sent from.', inputType: 'email', value: '""' },
   { key: 'email.replyTo',     group: 'email', label: 'Reply-to address',     helpText: 'Replies to your emails will go to this address.', inputType: 'email', value: '""' },
@@ -77,24 +77,24 @@ const DEFAULT_SETTINGS = [
 
   // Cloudflare R2 media storage
   { key: 'r2.accountId',   group: 'r2', label: 'Cloudflare account ID',   helpText: 'Your Cloudflare account ID. Found in the Cloudflare dashboard sidebar.', inputType: 'text', value: '""' },
-  { key: 'r2.accessKeyId', group: 'r2', label: 'R2 access key ID',        helpText: 'The access key ID for your R2 API token. Created in Cloudflare → R2 → Manage R2 API tokens.', inputType: 'text', value: '""' },
-  { key: 'r2.secretKey',   group: 'r2', label: 'R2 secret access key',    helpText: 'The secret key for your R2 API token. Only shown once when you create the token.', inputType: 'text', value: '""' },
+  { key: 'r2.accessKeyId', group: 'r2', label: 'R2 access key ID',        helpText: 'The access key ID for your R2 API token. Created in Cloudflare → R2 → Manage R2 API tokens.', inputType: 'secret', value: '""' },
+  { key: 'r2.secretKey',   group: 'r2', label: 'R2 secret access key',    helpText: 'The secret key for your R2 API token. Only shown once when you create the token.', inputType: 'secret', value: '""' },
   { key: 'r2.bucket',      group: 'r2', label: 'R2 bucket name',          helpText: 'The name of your R2 bucket where media files are stored.', inputType: 'text', value: '""' },
   { key: 'r2.publicUrl',   group: 'r2', label: 'Public media URL',        helpText: 'The public base URL for serving files (e.g. your custom domain or the R2 dev URL). No trailing slash.', inputType: 'text', value: '""' },
 
   // Vercel deployment
-  { key: 'vercel.token',     group: 'vercel', label: 'Vercel deploy token',  helpText: 'A Vercel API token with deploy permissions. Created in Vercel → Account Settings → Tokens.', inputType: 'text', value: '""' },
+  { key: 'vercel.token',     group: 'vercel', label: 'Vercel deploy token',  helpText: 'A Vercel API token with deploy permissions. Created in Vercel → Account Settings → Tokens.', inputType: 'secret', value: '""' },
   { key: 'vercel.projectId', group: 'vercel', label: 'Vercel project ID',    helpText: 'The ID of your Vercel project. Found in Vercel → Project Settings → General.', inputType: 'text', value: '""' },
   { key: 'vercel.teamId',    group: 'vercel', label: 'Vercel team ID',       helpText: 'Your Vercel team ID. Leave blank if deploying under a personal account.', inputType: 'text', value: '""' },
 
   // Backblaze B2 credentials (stored here for the connections panel; backup.ts reads env vars)
-  { key: 'b2.keyId',      group: 'b2', label: 'B2 application key ID',   helpText: 'Your Backblaze B2 application key ID. Found in Backblaze → App Keys.', inputType: 'text', value: '""' },
-  { key: 'b2.appKey',     group: 'b2', label: 'B2 application key',      helpText: 'Your Backblaze B2 application key. Only shown once when created.', inputType: 'text', value: '""' },
+  { key: 'b2.keyId',      group: 'b2', label: 'B2 application key ID',   helpText: 'Your Backblaze B2 application key ID. Found in Backblaze → App Keys.', inputType: 'secret', value: '""' },
+  { key: 'b2.appKey',     group: 'b2', label: 'B2 application key',      helpText: 'Your Backblaze B2 application key. Only shown once when created.', inputType: 'secret', value: '""' },
   { key: 'b2.bucket',     group: 'b2', label: 'B2 bucket name',          helpText: 'The name of your B2 bucket where backups are stored.', inputType: 'text', value: '""' },
   { key: 'b2.endpoint',   group: 'b2', label: 'B2 S3-compatible endpoint', helpText: 'The S3-compatible endpoint URL for your B2 bucket (e.g. https://s3.us-west-004.backblazeb2.com).', inputType: 'text', value: '""' },
 
   // Stripe secret key (public key + webhook secret already in stripe group)
-  { key: 'stripe.secretKey', group: 'stripe', label: 'Stripe secret key', helpText: 'Your Stripe secret key (starts with sk_). Keep this private. Found in Stripe Dashboard → Developers → API Keys.', inputType: 'text', value: '""' },
+  { key: 'stripe.secretKey', group: 'stripe', label: 'Stripe secret key', helpText: 'Your Stripe secret key (starts with sk_). Keep this private. Found in Stripe Dashboard → Developers → API Keys.', inputType: 'secret', value: '""' },
 
   // Backups
   { key: 'backups.provider',         group: 'backups', label: 'Backup storage provider', helpText: 'Where backups are stored.', inputType: 'select', value: '"backblaze_b2"', options: '[{"label":"Backblaze B2","value":"backblaze_b2"}]' },
@@ -108,7 +108,7 @@ const DEFAULT_SETTINGS = [
 
   // AI chat
   { key: 'ai.enabled',              group: 'ai', label: 'Enable AI chat widget',   helpText: 'Show the chat widget on your site so visitors can ask questions.', inputType: 'toggle', value: 'false' },
-  { key: 'ai.apiKey',               group: 'ai', label: 'Anthropic API key',        helpText: 'Your Anthropic API key from console.anthropic.com. Leave blank to use the ANTHROPIC_API_KEY environment variable instead.', inputType: 'text', value: '""' },
+  { key: 'ai.apiKey',               group: 'ai', label: 'Anthropic API key',        helpText: 'Your Anthropic API key from console.anthropic.com. Leave blank to use the ANTHROPIC_API_KEY environment variable instead.', inputType: 'secret', value: '""' },
   { key: 'ai.model',                group: 'ai', label: 'AI model',                 helpText: 'Which Claude model powers the chat. Haiku is faster and cheaper; Sonnet is more capable.', inputType: 'select', value: '"claude-haiku-4-5-20251001"', options: '[{"label":"Claude Haiku (fast, economical)","value":"claude-haiku-4-5-20251001"},{"label":"Claude Sonnet (more capable)","value":"claude-sonnet-4-6"}]' },
   { key: 'ai.personaName',          group: 'ai', label: 'Assistant name',          helpText: 'The name your AI assistant introduces itself as.', inputType: 'text', value: '"Cornelius"' },
   { key: 'ai.systemPrompt',         group: 'ai', label: 'Personality instructions', helpText: 'Instructions that shape how the assistant speaks and behaves. Write in plain English.', inputType: 'textarea', value: '"You are Cornelius, a distinguished Victorian gentleman and knowledgeable guide to The Victorian Illustrated Gazette — a premium coffee subscription service. Your role is to assist patrons with questions about their subscriptions, orders, account management, and our coffee selection.\\n\\nSpeak with warmth, wit, and period-appropriate charm — but always be clear, accurate, and genuinely helpful above all else. Use light Victorian flourishes without being obscure or verbose. Keep answers concise.\\n\\nIf a visitor asks something outside your knowledge or that requires account-specific detail, invite them to contact the editorial desk via the Help Desk or Contact page. Do not invent prices, product details, or policies — if uncertain, say so gracefully and direct them to the appropriate page."' },
@@ -120,7 +120,7 @@ const DEFAULT_SETTINGS = [
 
   // Analytics
   { key: 'analytics.enabled',       group: 'analytics', label: 'Enable analytics',        helpText: 'Turn PostHog tracking on or off. Disabling stops all event capture without removing your API key.', inputType: 'toggle', value: 'true' },
-  { key: 'analytics.posthogKey',    group: 'analytics', label: 'PostHog project API key', helpText: 'Your PostHog project API key. Found in PostHog → Project Settings → Project API Key. Starts with "phc_".', inputType: 'text', value: '""' },
+  { key: 'analytics.posthogKey',    group: 'analytics', label: 'PostHog project API key', helpText: 'Your PostHog project API key. Found in PostHog → Project Settings → Project API Key. Starts with "phc_".', inputType: 'secret', value: '""' },
   { key: 'analytics.posthogHost',   group: 'analytics', label: 'PostHog host',             helpText: 'Leave as the default unless you self-host PostHog.', inputType: 'text', value: '"https://us.i.posthog.com"' },
 
   // Maintenance
@@ -186,7 +186,7 @@ const DEFAULT_SETTINGS = [
 
   // Stripe
   { key: 'stripe.publicKey',      group: 'stripe', label: 'Stripe publishable key', helpText: 'Your Stripe publishable key (starts with pk_). Found in Stripe Dashboard → Developers → API Keys.', inputType: 'text', value: '""' },
-  { key: 'stripe.webhookSecret',  group: 'stripe', label: 'Stripe webhook secret',  helpText: 'The signing secret for your Stripe webhook endpoint. Found in Stripe Dashboard → Webhooks.', inputType: 'text', value: '""' },
+  { key: 'stripe.webhookSecret',  group: 'stripe', label: 'Stripe webhook secret',  helpText: 'The signing secret for your Stripe webhook endpoint. Found in Stripe Dashboard → Webhooks.', inputType: 'secret', value: '""' },
   { key: 'stripe.successUrl',     group: 'stripe', label: 'Payment success URL',    helpText: 'Where Stripe redirects the customer after a successful payment.', inputType: 'text', value: '"/account?payment=success"' },
   { key: 'stripe.cancelUrl',      group: 'stripe', label: 'Payment cancelled URL',  helpText: 'Where Stripe redirects the customer if they cancel the payment.', inputType: 'text', value: '"/pricing"' },
 ]

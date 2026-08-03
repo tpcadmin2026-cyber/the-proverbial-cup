@@ -23,3 +23,10 @@ export async function stripeConfiguredAsync(): Promise<boolean> {
   const key = process.env.STRIPE_SECRET_KEY || await getSetting<string>('stripe.secretKey', '')
   return !!key
 }
+
+// Checks env var first, then the admin-configured DB setting — same fallback
+// pattern as the secret/public keys above, so the Connections page field
+// actually does something instead of being silently ignored.
+export async function getStripeWebhookSecret(): Promise<string> {
+  return process.env.STRIPE_WEBHOOK_SECRET || await getSetting<string>('stripe.webhookSecret', '')
+}
