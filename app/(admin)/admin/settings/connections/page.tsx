@@ -9,7 +9,7 @@ import { getGroupSettings } from '../_shared'
 // existing rows (seeded as plain "text") to the masked type the first time this
 // page loads, so nothing needs a hand-run migration on already-deployed databases.
 const SECRET_KEYS = [
-  'email.apiKey', 'r2.accessKeyId', 'r2.secretKey', 'vercel.token',
+  'email.apiKey', 'vercel.token',
   'b2.keyId', 'b2.appKey', 'stripe.secretKey', 'ai.apiKey',
   'analytics.posthogKey', 'stripe.webhookSecret',
 ]
@@ -21,17 +21,22 @@ export default async function ConnectionsSettingsPage() {
   })
 
   // Combine all connection-related settings
-  const [backupRows, changelogRows, aiRows, analyticsRows, r2Rows, vercelRows, b2Rows, stripeRows, emailRows] = await Promise.all([
+  const [backupRows, changelogRows, aiRows, analyticsRows, vercelRows, b2Rows, stripeRows, emailRows] = await Promise.all([
     getGroupSettings('backups'),
     getGroupSettings('changelog'),
     getGroupSettings('ai'),
     getGroupSettings('analytics'),
-    getGroupSettings('r2'),
     getGroupSettings('vercel'),
     getGroupSettings('b2'),
     getGroupSettings('stripe'),
     getGroupSettings('email'),
   ])
+
+  // Unlike everything else on this page, media storage credentials are env-var
+  // only (no database fallback) — kept out of the DB on purpose since they're
+  // service-role keys with full storage access. So this is a status card, not
+  // an editable form.
+  const supabaseConfigured = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
 
   return (
     <>
@@ -62,9 +67,31 @@ export default async function ConnectionsSettingsPage() {
         </div>
         <SettingsGroupPage rows={stripeRows} />
         <div className="px-8 pt-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Media storage — Cloudflare R2</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Media storage — Supabase Storage</h2>
         </div>
-        <SettingsGroupPage rows={r2Rows} />
+        <div className="px-8 pb-6">
+          <div className="bg-white rounded-lg border border-gray-200 px-5 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`inline-block w-2 h-2 rounded-full ${supabaseConfigured ? 'bg-green-500' : 'bg-gray-300'}`} />
+              <span className="text-sm font-semibold text-gray-900">
+                {supabaseConfigured ? 'Configured' : 'Not configured'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              File uploads (media library, product images, CMS image blocks, masthead logo) use Supabase Storage.
+              Unlike the settings above, these credentials are set as environment variables only — not editable
+              here — since they're service-role keys with full storage access.
+            </p>
+            <p className="text-xs text-gray-500">
+              Set these in Railway → your service → Variables:
+            </p>
+            <ul className="text-xs font-mono text-gray-600 mt-1.5 space-y-0.5">
+              <li>SUPABASE_URL</li>
+              <li>SUPABASE_SERVICE_KEY</li>
+              <li>SUPABASE_BUCKET <span className="font-sans text-gray-400">(optional — defaults to &quot;media&quot;)</span></li>
+            </ul>
+          </div>
+        </div>
         <div className="px-8 pt-4">
           <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Backups — Backblaze B2</h2>
         </div>

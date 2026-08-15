@@ -90,11 +90,12 @@ export function MediaLibrary({ configured }: { configured: boolean }) {
     return (
       <div className="p-8">
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 max-w-lg">
-          <p className="text-sm font-semibold text-amber-800 mb-1">Cloudflare R2 not configured</p>
+          <p className="text-sm font-semibold text-amber-800 mb-1">Supabase Storage not configured</p>
           <p className="text-sm text-amber-700">
-            Add your R2 credentials in{' '}
+            Set <code className="font-mono">SUPABASE_URL</code> and <code className="font-mono">SUPABASE_SERVICE_KEY</code> as environment
+            variables in Railway to enable media storage. See{' '}
             <a href="/admin/settings/connections" className="underline">Settings → Connections</a>{' '}
-            to enable media storage.
+            for the full list.
           </p>
         </div>
       </div>

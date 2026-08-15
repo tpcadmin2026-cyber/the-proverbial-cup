@@ -75,12 +75,10 @@ const DEFAULT_SETTINGS = [
   { key: 'subscriptions.winback30Subject',  group: 'subscriptions', label: 'Win-back email subject (day 30)', helpText: 'Subject line of the email sent 30 days after a cancellation.', inputType: 'text', value: '"We miss you at the Gazette — a word from the Editor"' },
   { key: 'subscriptions.winback60Subject',  group: 'subscriptions', label: 'Win-back email subject (day 60)', helpText: 'Subject line of the email sent 60 days after a cancellation.', inputType: 'text', value: '"One final dispatch from the Gazette"' },
 
-  // Cloudflare R2 media storage
-  { key: 'r2.accountId',   group: 'r2', label: 'Cloudflare account ID',   helpText: 'Your Cloudflare account ID. Found in the Cloudflare dashboard sidebar.', inputType: 'text', value: '""' },
-  { key: 'r2.accessKeyId', group: 'r2', label: 'R2 access key ID',        helpText: 'The access key ID for your R2 API token. Created in Cloudflare → R2 → Manage R2 API tokens.', inputType: 'secret', value: '""' },
-  { key: 'r2.secretKey',   group: 'r2', label: 'R2 secret access key',    helpText: 'The secret key for your R2 API token. Only shown once when you create the token.', inputType: 'secret', value: '""' },
-  { key: 'r2.bucket',      group: 'r2', label: 'R2 bucket name',          helpText: 'The name of your R2 bucket where media files are stored.', inputType: 'text', value: '""' },
-  { key: 'r2.publicUrl',   group: 'r2', label: 'Public media URL',        helpText: 'The public base URL for serving files (e.g. your custom domain or the R2 dev URL). No trailing slash.', inputType: 'text', value: '""' },
+  // Media storage (Supabase Storage) is configured entirely via SUPABASE_URL /
+  // SUPABASE_SERVICE_KEY / SUPABASE_BUCKET environment variables — see
+  // app/(admin)/admin/settings/connections/page.tsx — intentionally no DB-backed
+  // settings here since these are service-role keys with full storage access.
 
   // Vercel deployment
   { key: 'vercel.token',     group: 'vercel', label: 'Vercel deploy token',  helpText: 'A Vercel API token with deploy permissions. Created in Vercel → Account Settings → Tokens.', inputType: 'secret', value: '""' },
