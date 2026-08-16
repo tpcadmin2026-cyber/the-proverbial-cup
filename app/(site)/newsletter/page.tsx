@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 interface Props {
-  searchParams: Promise<{ confirmed?: string }>
+  searchParams: Promise<{ confirmed?: string; unsubscribed?: string }>
 }
 
 export default async function NewsletterPage({ searchParams }: Props) {
@@ -18,7 +18,7 @@ export default async function NewsletterPage({ searchParams }: Props) {
   if (!await isEnabled('newsletter')) {
     return <FeatureDisabled siteName={siteName} title="Newsletter" message="Our newsletter sign-up is not yet open. Please check back soon." />
   }
-  const [{ confirmed }, heading, subheading, successMessage] = await Promise.all([
+  const [{ confirmed, unsubscribed }, heading, subheading, successMessage] = await Promise.all([
     searchParams,
     getSetting<string>('newsletter.heading', 'Despatches from the Gazette'),
     getSetting<string>('newsletter.subheading', 'Receive the finest coffee dispatches, seasonal offerings, and editorial intelligence directly to your correspondence box.'),
@@ -32,6 +32,7 @@ export default async function NewsletterPage({ searchParams }: Props) {
       subheading={subheading}
       successMessage={successMessage}
       confirmedParam={confirmed}
+      unsubscribedParam={unsubscribed}
     />
   )
 }

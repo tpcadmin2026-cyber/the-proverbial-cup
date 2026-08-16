@@ -134,6 +134,8 @@ model CmsPage {
   tabLabel       String       // Label shown in the side tab
   tabNumeral     String       // Roman numeral e.g. "I", "II"
   pageOrder      Int
+  pageType       String       @default("content") // content | header | footer | newspaper — header/footer are singleton block regions; newspaper is a mailable issue, never shown as a newspaper-tab
+  sentAt         DateTime?    // Newspaper issues only — when this issue was last emailed to subscribers
   layout         String       @default("columns-3") // columns-1 | columns-2 | columns-3 | columns-2-1 | columns-1-2
   columnRatios   String?      // JSON e.g. {"left":"2fr","right":"1fr"}
   sectionLabel   String?      // Section heading shown top-left
@@ -177,6 +179,8 @@ model ContentBlock {
   blockKey       String?  // Client-generated stable id — survives the delete/recreate save cycle, unlike `id`
   overlayOf      String?  // blockKey of the block this one is layered on top of (e.g. a button over an image)
   overlayPosition String? // Anchor position within the target block: top-left, top-center, top-right, middle-left, center, middle-right, bottom-left, bottom-center, bottom-right
+  overlayOffsetX  Int?     // Fine-tune shift in pixels from the anchor position, horizontal
+  overlayOffsetY  Int?     // Fine-tune shift in pixels from the anchor position, vertical
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

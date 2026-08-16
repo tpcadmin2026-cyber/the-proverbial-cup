@@ -37,10 +37,12 @@ export const BLOCK_TYPES = [
   { value: 'featured_products', group: 'Commerce', label: 'Featured products', description: 'Promote up to 6 products from your shop in a row — pair with "Span" for full width', icon: '⊡' },
   { value: 'account_widget',    group: 'Commerce', label: 'Account',           description: 'Sign in/sign up prompt for guests, or a profile summary with quick links for logged-in visitors', icon: '◈' },
   // Layout
+  { value: 'steps',        group: 'Layout',     label: 'Steps / Features',description: 'A centered title with repeatable image + title + text points — for "How it works" or "Choose your plan" style sections', icon: '⚏' },
   { value: 'section_label',group: 'Layout',     label: 'Section label',   description: 'Bold section heading with decorative rule', icon: '§' },
   { value: 'rule',         group: 'Layout',     label: 'Rule / divider',  description: 'Ornamental horizontal dividing rule', icon: '—' },
   { value: 'ornament',     group: 'Layout',     label: 'Ornament',        description: 'Decorative Victorian symbol or dingbat', icon: '❧' },
   { value: 'spacer',       group: 'Layout',     label: 'Spacer',          description: 'Blank space to fill a gap — place in one column, or set Span to blank out a wider band', icon: '↕' },
+  { value: 'blank',        group: 'Layout',     label: 'Blank block',     description: 'An empty panel with optional background colour and border — a canvas to layer overlay blocks on top of', icon: '▭' },
   // Advanced
   { value: 'html',         group: 'Advanced',   label: 'Custom HTML',     description: 'Raw HTML — embeds, iframes, custom code', icon: '</>' },
 ] as const
@@ -237,6 +239,37 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
         </div>
       )
     }
+    case 'steps': {
+      const d = parseJson<{ title: string; items: { image: string; title: string; text: string }[] }>(text, { title: '', items: [] })
+      if (!d.title && d.items.length === 0) return null
+      return (
+        <div style={{ margin: '1em 0' }}>
+          {d.title && (
+            <div className="section-label" style={{ textAlign: 'center', marginBottom: '1em' }}>{d.title}</div>
+          )}
+          {d.items.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(140px, 1fr))`, gap: '20px' }}>
+              {d.items.map((item, i) => (
+                <div key={i} style={{ textAlign: 'center' }}>
+                  {item.image && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={item.image} alt={item.title} style={{ width: '56px', height: '56px', objectFit: 'contain', margin: '0 auto 10px' }} />
+                  )}
+                  {item.title && (
+                    <div style={{ fontFamily: 'var(--font-smallcaps)', fontWeight: 'bold', fontSize: '0.85em', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                      {item.title}
+                    </div>
+                  )}
+                  {item.text && (
+                    <div className="body-text" style={{ fontSize: '0.8em', color: 'var(--ink-faded)' }}>{item.text}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
     case 'section_label':
       return <div className="section-label" style={{ margin: '0.5em 0' }}>{text}</div>
     case 'rule':
@@ -245,6 +278,16 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       return <div className="rule-ornate" style={{ margin: '0.5em 0', textAlign: 'center' }}>{text || '⸻ ✦ ⸻'}</div>
     case 'spacer':
       return <div style={{ height: `${parseInt(text) || 24}px` }} />
+    case 'blank': {
+      const d = parseJson<{ height: number; backgroundColor: string; bordered: boolean }>(text, { height: 200, backgroundColor: 'transparent', bordered: false })
+      return (
+        <div style={{
+          height: `${d.height ?? 200}px`,
+          backgroundColor: d.backgroundColor || 'transparent',
+          border: d.bordered ? '1px solid var(--ink-faded)' : undefined,
+        }} />
+      )
+    }
     case 'html':
       return <div style={{ margin: '0.5em 0' }} dangerouslySetInnerHTML={{ __html: text }} />
     default:
@@ -363,7 +406,12 @@ function StaticBlockWithOverlays({ block, overlays, products, currency, currentU
     <div style={{ position: 'relative' }}>
       <StaticBlock block={block} products={products} currency={currency} currentUser={currentUser} />
       {overlays.map((ov) => (
-        <div key={ov.id} style={{ position: 'absolute', zIndex: 5, ...(OVERLAY_POSITION_STYLES[ov.overlayPosition ?? 'center'] ?? OVERLAY_POSITION_STYLES.center) }}>
+        <div key={ov.id} style={{
+          position: 'absolute', zIndex: 5,
+          ...(OVERLAY_POSITION_STYLES[ov.overlayPosition ?? 'center'] ?? OVERLAY_POSITION_STYLES.center),
+          marginLeft: ov.overlayOffsetX || undefined,
+          marginTop: ov.overlayOffsetY || undefined,
+        }}>
           <StaticBlock block={ov} products={products} currency={currency} currentUser={currentUser} />
         </div>
       ))}
@@ -684,6 +732,8 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   const [colSpan, setColSpan] = useState(block.colSpan ?? 1)
   const [overlayOf, setOverlayOf] = useState<string>(block.overlayOf ?? '')
   const [overlayPosition, setOverlayPosition] = useState<string>(block.overlayPosition ?? 'center')
+  const [overlayOffsetX, setOverlayOffsetX] = useState<number>(block.overlayOffsetX ?? 0)
+  const [overlayOffsetY, setOverlayOffsetY] = useState<number>(block.overlayOffsetY ?? 0)
 
   // Any other block on the page can be an overlay target — except blocks that are
   // themselves overlaying something (no overlay-on-overlay chains) or this block itself.
@@ -743,6 +793,49 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   // Spacer height
   const [spacerHeight, setSpacerHeight] = useState(block.blockType === 'spacer' ? (parseInt(block.content) || 24) : 24)
 
+  // Blank block fields
+  const blankData = parseJson<{ height: number; backgroundColor: string; bordered: boolean }>(block.blockType === 'blank' ? block.content : '{}', { height: 200, backgroundColor: '', bordered: false })
+  const [blankHeight, setBlankHeight] = useState(blankData.height ?? 200)
+  const [blankBg, setBlankBg] = useState(blankData.backgroundColor ?? '')
+  const [blankBordered, setBlankBordered] = useState(blankData.bordered ?? false)
+
+  // Steps / Features fields
+  const stepsData = parseJson<{ title: string; items: { image: string; title: string; text: string }[] }>(
+    block.blockType === 'steps' ? block.content : '{}',
+    { title: '', items: [{ image: '', title: '', text: '' }] }
+  )
+  const [stepsTitle, setStepsTitle] = useState(stepsData.title)
+  const [stepsItems, setStepsItems] = useState(stepsData.items.length > 0 ? stepsData.items : [{ image: '', title: '', text: '' }])
+  const [stepsUploadingIndex, setStepsUploadingIndex] = useState<number | null>(null)
+
+  function updateStepItem(i: number, patch: Partial<{ image: string; title: string; text: string }>) {
+    setStepsItems((prev) => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it))
+  }
+  function addStepItem() {
+    setStepsItems((prev) => [...prev, { image: '', title: '', text: '' }])
+  }
+  function removeStepItem(i: number) {
+    setStepsItems((prev) => prev.filter((_, idx) => idx !== i))
+  }
+  async function handleStepImageUpload(i: number, file: File) {
+    setStepsUploadingIndex(i)
+    try {
+      const presignRes = await fetch('/api/admin/media/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      })
+      const presignData = await presignRes.json()
+      if (!presignRes.ok) throw new Error(presignData.error ?? 'Upload failed')
+      await fetch(presignData.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+      updateStepItem(i, { image: presignData.publicUrl })
+    } catch {
+      // Silently ignore — the URL field stays editable so they can paste one manually
+    } finally {
+      setStepsUploadingIndex(null)
+    }
+  }
+
   // Featured products fields
   const fpData = parseJson<{ heading: string; productIds: string[] }>(block.blockType === 'featured_products' ? block.content : '{}', { heading: 'Featured Products', productIds: [] })
   const [fpHeading, setFpHeading] = useState(fpData.heading)
@@ -762,6 +855,8 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
       case 'cta':   return JSON.stringify({ text: ctaText, url: ctaUrl, style: ctaStyle })
       case 'ornament': return ornament
       case 'spacer': return String(spacerHeight)
+      case 'blank': return JSON.stringify({ height: blankHeight, backgroundColor: blankBg, bordered: blankBordered })
+      case 'steps': return JSON.stringify({ title: stepsTitle, items: stepsItems.filter((it) => it.image || it.title || it.text) })
       case 'featured_products': return JSON.stringify({ heading: fpHeading, productIds: fpProductIds })
       default: return text
     }
@@ -772,6 +867,8 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
       ...block, blockType: type, content: buildContent(), column, colSpan,
       overlayOf: overlayOf || null,
       overlayPosition: overlayOf ? overlayPosition : null,
+      overlayOffsetX: overlayOf ? (overlayOffsetX || null) : null,
+      overlayOffsetY: overlayOf ? (overlayOffsetY || null) : null,
     })
     onClose()
   }
@@ -882,6 +979,30 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                         {p.label}
                       </button>
                     ))}
+                  </div>
+                </div>
+              )}
+              {overlayOf && (
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ width: '64px' }}>
+                    <FieldLabel>Shift X</FieldLabel>
+                    <input
+                      type="number"
+                      value={overlayOffsetX}
+                      onChange={(e) => setOverlayOffsetX(Number(e.target.value))}
+                      title="Fine-tune horizontal position in pixels — negative shifts left"
+                      style={{ ...inputStyle, padding: '8px 6px', textAlign: 'center' }}
+                    />
+                  </div>
+                  <div style={{ width: '64px' }}>
+                    <FieldLabel>Shift Y</FieldLabel>
+                    <input
+                      type="number"
+                      value={overlayOffsetY}
+                      onChange={(e) => setOverlayOffsetY(Number(e.target.value))}
+                      title="Fine-tune vertical position in pixels — negative shifts up"
+                      style={{ ...inputStyle, padding: '8px 6px', textAlign: 'center' }}
+                    />
                   </div>
                 </div>
               )}
@@ -1052,6 +1173,98 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
               <FieldLabel>Height (px)</FieldLabel>
               <input type="number" value={spacerHeight} onChange={(e) => setSpacerHeight(Number(e.target.value))} min={8} max={200} step={4} style={{ ...inputStyle, width: '120px' }} />
               <HelpText>Sets the amount of vertical blank space between blocks.</HelpText>
+            </div>
+          )}
+
+          {/* ── BLANK BLOCK ── */}
+          {type === 'blank' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ width: '120px' }}>
+                  <FieldLabel>Height (px)</FieldLabel>
+                  <input type="number" value={blankHeight} onChange={(e) => setBlankHeight(Number(e.target.value))} min={20} max={2000} step={10} style={inputStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Background colour</FieldLabel>
+                  <input type="text" value={blankBg} onChange={(e) => setBlankBg(e.target.value)} placeholder="e.g. #f5f2e8 or transparent" style={inputStyle} />
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#4B4C44', cursor: 'pointer' }}>
+                <input type="checkbox" checked={blankBordered} onChange={(e) => setBlankBordered(e.target.checked)} />
+                Show a thin border around the panel
+              </label>
+              <HelpText>A plain empty panel — use it as a canvas to layer overlay blocks on top of, or just as a coloured spacer band.</HelpText>
+            </div>
+          )}
+
+          {/* ── STEPS / FEATURES ── */}
+          {type === 'steps' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <FieldLabel>Section title <span style={{ color: '#b8b090', fontWeight: 400 }}>(centered above the points)</span></FieldLabel>
+                <input type="text" value={stepsTitle} onChange={(e) => setStepsTitle(e.target.value)} placeholder="How It Works" style={inputStyle} />
+              </div>
+
+              {stepsItems.map((item, i) => (
+                <div key={i} style={{ border: '1px solid #e8dcc4', borderRadius: 6, padding: 12, backgroundColor: '#faf7ee' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 700, color: '#7A564C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Point {i + 1}
+                    </span>
+                    {stepsItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeStepItem(i)}
+                        style={{ background: 'none', border: 'none', color: '#c0504d', fontSize: 11, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <div style={{ width: 72, flexShrink: 0, textAlign: 'center' }}>
+                      {item.image ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={item.image} alt="" style={{ width: 56, height: 56, objectFit: 'contain', margin: '0 auto 6px', display: 'block' }} />
+                      ) : (
+                        <div style={{ width: 56, height: 56, margin: '0 auto 6px', borderRadius: 4, backgroundColor: '#f0ece0', border: '1px dashed #c8c4a8' }} />
+                      )}
+                      <label style={{ display: 'block', fontSize: 10, color: '#7A564C', cursor: stepsUploadingIndex === i ? 'not-allowed' : 'pointer', fontFamily: 'Inter, sans-serif' }}>
+                        {stepsUploadingIndex === i ? 'Uploading…' : 'Upload'}
+                        <input
+                          type="file" accept="image/*" style={{ display: 'none' }}
+                          disabled={stepsUploadingIndex === i}
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleStepImageUpload(i, f) }}
+                        />
+                      </label>
+                    </div>
+
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <input
+                        type="text" value={item.title} onChange={(e) => updateStepItem(i, { title: e.target.value })}
+                        placeholder="Take the Quiz" style={{ ...inputStyle, fontWeight: 600 }}
+                      />
+                      <input
+                        type="text" value={item.text} onChange={(e) => updateStepItem(i, { text: e.target.value })}
+                        placeholder="Tell us your taste preferences." style={inputStyle}
+                      />
+                      <input
+                        type="url" value={item.image} onChange={(e) => updateStepItem(i, { image: e.target.value })}
+                        placeholder="or paste an image URL" style={{ ...inputStyle, fontSize: 11 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button" onClick={addStepItem}
+                style={{ padding: '8px', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, backgroundColor: 'transparent', border: '1px dashed #C4AB77', borderRadius: 4, cursor: 'pointer', color: '#C4AB77' }}
+              >
+                + Add point
+              </button>
+              <HelpText>Add as many points as you like — each gets its own image, title, and short line of text. Works well spanning all columns.</HelpText>
             </div>
           )}
 
@@ -1380,7 +1593,7 @@ function ToolbarBtn({ title, onClick, color, children }: { title: string; onClic
 
 // ─── Visual edit panel ────────────────────────────────────────────────────────
 
-function EditablePanel({ pageId, columnCount, layout, products, currency }: { pageId: string; columnCount: number; layout: string; products: ProductSummary[]; currency: string }) {
+export function EditablePanel({ pageId, columnCount, layout, products, currency }: { pageId: string; columnCount: number; layout: string; products: ProductSummary[]; currency: string }) {
   const ctx = useContext(CmsEditContext)!
   const blocks = ctx.getPageBlocks(pageId)
   const [editingBlock, setEditingBlock] = useState<EditBlock | null>(null)
@@ -1536,7 +1749,7 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
                 >
                   <SortableContext items={colBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                     {colBlocks.length === 0 && !activeId && (
-                      <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: "'Libre Baskerville', serif", color: 'rgba(139,105,20,0.5)', fontStyle: 'italic', fontSize: '12px', borderRadius: '2px', border: '1px dashed rgba(139,105,20,0.3)' }}>
+                      <div style={{ padding: '16px 0', textAlign: 'center', fontFamily: "'Libre Baskerville', serif", color: 'rgba(139,105,20,0.5)', fontStyle: 'italic', fontSize: '12px' }}>
                         Drop blocks here
                       </div>
                     )}

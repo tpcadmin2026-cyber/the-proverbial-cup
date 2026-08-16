@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
         ...(customJs !== undefined && { customJs: customJs || null }),
         ...(blocks !== undefined && {
           blocks: {
-            create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; colSpan?: number; visible?: boolean; blockOrder: number; blockKey?: string | null; overlayOf?: string | null; overlayPosition?: string | null }) => ({
+            create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; colSpan?: number; visible?: boolean; blockOrder: number; blockKey?: string | null; overlayOf?: string | null; overlayPosition?: string | null; overlayOffsetX?: number | null; overlayOffsetY?: number | null }) => ({
               blockType: b.blockType,
               content: b.content ?? null,
               column: b.column ?? 1,
@@ -47,6 +47,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
               blockKey: b.blockKey ?? null,
               overlayOf: b.overlayOf ?? null,
               overlayPosition: b.overlayPosition ?? null,
+              overlayOffsetX: b.overlayOffsetX ?? null,
+              overlayOffsetY: b.overlayOffsetY ?? null,
             })),
           },
         }),
@@ -63,6 +65,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     await requireAdmin()
     const { pageId } = await params
+    const page = await db.cmsPage.findUnique({ where: { id: pageId }, select: { pageType: true } })
+    if (page?.pageType === 'header' || page?.pageType === 'footer') {
+      return NextResponse.json({ error: 'The header and footer cannot be deleted.' }, { status: 400 })
+    }
     await db.cmsPage.delete({ where: { id: pageId } })
     return NextResponse.json({ success: true })
   } catch {

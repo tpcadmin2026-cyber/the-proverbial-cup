@@ -10,9 +10,10 @@ interface Props {
   subheading: string
   successMessage: string
   confirmedParam?: string
+  unsubscribedParam?: string
 }
 
-export function NewsletterSignUp({ siteName, heading, subheading, successMessage, confirmedParam }: Props) {
+export function NewsletterSignUp({ siteName, heading, subheading, successMessage, confirmedParam, unsubscribedParam }: Props) {
   const [form, setForm] = useState({ name: '', email: '' })
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
@@ -73,6 +74,15 @@ export function NewsletterSignUp({ siteName, heading, subheading, successMessage
               <div className="text-4xl text-[#C4AB77] mb-4">✦</div>
               <p className="font-playfair text-xl text-[#35291C] mb-2">Subscription Confirmed</p>
               <p className="font-baskerville italic text-[#4B4C44] text-lg">You're all set — despatches will begin arriving in your correspondence box.</p>
+              <a href="/" className="inline-block mt-6 text-sm text-[#C4AB77] hover:underline">
+                ← Return to The Gazette
+              </a>
+            </div>
+          ) : unsubscribedParam === '1' ? (
+            <div className="px-8 py-12 text-center">
+              <div className="text-4xl text-[#C4AB77] mb-4">✦</div>
+              <p className="font-playfair text-xl text-[#35291C] mb-2">Unsubscribed</p>
+              <p className="font-baskerville italic text-[#4B4C44] text-lg">You've been removed from our correspondence list. Sorry to see you go.</p>
               <a href="/" className="inline-block mt-6 text-sm text-[#C4AB77] hover:underline">
                 ← Return to The Gazette
               </a>

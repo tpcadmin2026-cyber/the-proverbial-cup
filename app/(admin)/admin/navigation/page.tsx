@@ -7,7 +7,7 @@ import { NavEditor } from './NavEditor'
 export default async function NavigationAdminPage() {
   const [navItems, pages] = await Promise.all([
     db.navItem.findMany({ orderBy: { navOrder: 'asc' } }),
-    db.cmsPage.findMany({ orderBy: { pageOrder: 'asc' }, select: { id: true, tabLabel: true, tabNumeral: true, pageOrder: true, published: true, showInNav: true } }),
+    db.cmsPage.findMany({ where: { pageType: 'content' }, orderBy: { pageOrder: 'asc' }, select: { id: true, tabLabel: true, tabNumeral: true, pageOrder: true, published: true, showInNav: true } }),
   ])
 
   return (

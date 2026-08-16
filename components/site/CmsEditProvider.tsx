@@ -187,6 +187,8 @@ export function CmsEditProvider({ children, pages }: Props) {
             blockKey: b.blockKey ?? null,
             overlayOf: b.overlayOf ?? null,
             overlayPosition: b.overlayPosition ?? null,
+            overlayOffsetX: b.overlayOffsetX ?? null,
+            overlayOffsetY: b.overlayOffsetY ?? null,
           })),
         }),
       })

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { db } from '@/lib/db'
 import { getSetting } from '@/lib/settings'
 import { isAdminRole } from '@/lib/access'
+import { getHeaderPage } from '@/lib/headerFooterPages'
 import { VictorianTemplate } from '@/components/site/VictorianTemplate'
 import { CmsEditProvider } from '@/components/site/CmsEditProvider'
 
@@ -53,10 +54,11 @@ export default async function SitePage() {
     }
   }
 
-  // Load nav items, pages, and the product catalogue (for "featured products" blocks) in parallel
-  const [pages, navItems, products] = await Promise.all([
+  // Load nav items, pages, the product catalogue (for "featured products" blocks),
+  // and the customizable header band in parallel
+  const [pages, navItems, products, headerPage] = await Promise.all([
     db.cmsPage.findMany({
-      where: { published: true },
+      where: { published: true, pageType: 'content' },
       orderBy: { pageOrder: 'asc' },
       include: {
         blocks: {
@@ -71,7 +73,23 @@ export default async function SitePage() {
       orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }],
       select: { id: true, slug: true, name: true, priceInCents: true },
     }),
+    getHeaderPage(),
   ])
+
+  const headerBlocks = headerPage.blocks.map((b) => ({
+    id: b.id,
+    blockType: b.blockType,
+    content: b.content ?? '',
+    column: b.column ?? 1,
+    colSpan: b.colSpan ?? 1,
+    visible: b.visible,
+    blockOrder: b.blockOrder,
+    blockKey: b.blockKey,
+    overlayOf: b.overlayOf,
+    overlayPosition: b.overlayPosition,
+    overlayOffsetX: b.overlayOffsetX,
+    overlayOffsetY: b.overlayOffsetY,
+  }))
 
   // Load design + masthead settings
   const [
@@ -106,6 +124,8 @@ export default async function SitePage() {
       products={products}
       currency={currency}
       currentUser={currentUser}
+      headerPageId={headerPage.id}
+      headerBlocks={headerBlocks}
     />
   )
 
@@ -127,6 +147,8 @@ export default async function SitePage() {
         blockKey: b.blockKey,
         overlayOf: b.overlayOf,
         overlayPosition: b.overlayPosition,
+        overlayOffsetX: b.overlayOffsetX,
+        overlayOffsetY: b.overlayOffsetY,
       })),
     }))
     return <CmsEditProvider pages={editorPages}>{template}</CmsEditProvider>

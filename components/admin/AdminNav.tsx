@@ -45,6 +45,8 @@ const NAV_ITEMS: NavItem[] = [
     href: '/admin/content', label: 'Content', icon: '❧',
     children: [
       { href: '/admin/content/pages',        label: 'Pages' },
+      { href: '/admin/content/header',       label: 'Header' },
+      { href: '/admin/content/footer',       label: 'Footer' },
       { href: '/admin/content/blog',         label: 'Blog' },
       { href: '/admin/content/reading-room', label: 'Reading Room' },
       { href: '/admin/navigation',           label: 'Navigation' },
@@ -65,6 +67,7 @@ const NAV_ITEMS: NavItem[] = [
       { href: '/admin/support/chat',    label: 'Chat logs' },
     ],
   },
+  { href: '/admin/content/newspapers', label: 'Newspaper', icon: '📰' },
   { href: '/admin/newsletter', label: 'Newsletter',    icon: '◎' },
   { href: '/admin/waitlist',   label: 'Waitlist',      icon: '◉' },
   { href: '/admin/quiz',       label: 'Quiz',          icon: '?' },

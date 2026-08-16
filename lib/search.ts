@@ -282,7 +282,7 @@ export async function rebuildSearchIndex(): Promise<{ indexed: number }> {
     db.kbArticle.findMany({ include: { category: true } }),
     db.product.findMany(),
     db.subscriptionPlan.findMany(),
-    db.cmsPage.findMany({ include: { blocks: true } }),
+    db.cmsPage.findMany({ where: { pageType: 'content' }, include: { blocks: true } }),
   ])
 
   await Promise.all([

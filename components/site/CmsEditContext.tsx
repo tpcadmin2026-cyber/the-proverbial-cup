@@ -13,6 +13,8 @@ export interface EditBlock {
   blockKey?: string | null
   overlayOf?: string | null
   overlayPosition?: string | null
+  overlayOffsetX?: number | null
+  overlayOffsetY?: number | null
 }
 
 export interface CmsEditContextValue {

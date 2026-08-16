@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { CmsBlockArea, type ProductSummary } from './CmsBlockArea'
+import type { EditBlock } from './CmsEditContext'
 
 interface Props {
   siteName: string
@@ -12,9 +14,13 @@ interface Props {
   facebook: string
   showChangelog: boolean
   showAccountLink: boolean
+  footerPageId?: string
+  customBlocks?: EditBlock[]
+  products?: ProductSummary[]
+  currency?: string
 }
 
-export function SiteFooter({ siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog, showAccountLink }: Props) {
+export function SiteFooter({ siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog, showAccountLink, footerPageId, customBlocks = [], products = [], currency = 'USD' }: Props) {
   const hasAddress = address.trim() !== ''
   const hasSocial = twitter || instagram || facebook
 
@@ -31,6 +37,21 @@ export function SiteFooter({ siteName, copyright, contactEmail, address, termsUr
         <div style={{ fontFamily: 'var(--font-masthead)', fontSize: '1rem', color: 'var(--ink)', marginBottom: '0.5rem' }}>
           {siteName}
         </div>
+
+        {/* Custom footer content — admin-editable blocks */}
+        {customBlocks.length > 0 && footerPageId && (
+          <div style={{ marginBottom: '0.75rem', textAlign: 'left' }}>
+            <CmsBlockArea
+              pageId={footerPageId}
+              initialBlocks={customBlocks}
+              columnCount={3}
+              layout="columns-3"
+              isPlaceholder={false}
+              products={products}
+              currency={currency}
+            />
+          </div>
+        )}
 
         {/* Nav links */}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.4rem 1.2rem', marginBottom: '0.75rem' }}>

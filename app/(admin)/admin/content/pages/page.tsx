@@ -5,6 +5,7 @@ import { DeletePageButton } from './DeletePageButton'
 
 export default async function ContentPagesPage() {
   const pages = await db.cmsPage.findMany({
+    where: { pageType: 'content' },
     orderBy: { pageOrder: 'asc' },
     include: { _count: { select: { blocks: true } } },
   })

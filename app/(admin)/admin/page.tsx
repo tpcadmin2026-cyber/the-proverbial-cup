@@ -11,7 +11,7 @@ export default async function AdminOverviewPage() {
   const [recentLog, backups, pages, userCount, openTickets] = await Promise.all([
     getChangelog({ limit: 8 }),
     getRecentBackups(3),
-    db.cmsPage.findMany({ orderBy: { pageOrder: 'asc' }, include: { _count: { select: { blocks: true } } } }),
+    db.cmsPage.findMany({ where: { pageType: 'content' }, orderBy: { pageOrder: 'asc' }, include: { _count: { select: { blocks: true } } } }),
     db.user.count(),
     db.supportTicket.count({ where: { status: 'open' } }),
   ])

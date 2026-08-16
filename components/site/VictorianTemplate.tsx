@@ -1,6 +1,7 @@
 import type { CmsPage, ContentBlock, NavItem } from '@prisma/client'
 import { VictorianNav } from './VictorianNav'
 import { CmsBlockArea, type ProductSummary } from './CmsBlockArea'
+import type { EditBlock } from './CmsEditContext'
 
 type PageWithBlocks = CmsPage & { blocks: ContentBlock[] }
 
@@ -38,23 +39,38 @@ interface Props {
   products?: ProductSummary[]
   currency?: string
   currentUser?: { name: string | null; email: string; planName: string | null } | null
+  headerPageId?: string
+  headerBlocks?: EditBlock[]
 }
 
 const DEFAULT_PAGES: PageWithBlocks[] = [
-  { id: 'p1', tabNumeral: 'I',   tabLabel: 'Front Page',         pageOrder: 1, slug: 'front-page',         layout: 'columns-3', published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
-  { id: 'p2', tabNumeral: 'II',  tabLabel: 'Foreign & Commerce', pageOrder: 2, slug: 'foreign-commerce',   layout: 'columns-3', published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
-  { id: 'p3', tabNumeral: 'III', tabLabel: 'Science & Arts',     pageOrder: 3, slug: 'science-arts',       layout: 'columns-3', published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
-  { id: 'p4', tabNumeral: 'IV',  tabLabel: 'Sport & Letters',    pageOrder: 4, slug: 'sport-letters',      layout: 'columns-3', published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'p1', tabNumeral: 'I',   tabLabel: 'Front Page',         pageOrder: 1, slug: 'front-page',         layout: 'columns-3', pageType: 'content', sentAt: null, published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'p2', tabNumeral: 'II',  tabLabel: 'Foreign & Commerce', pageOrder: 2, slug: 'foreign-commerce',   layout: 'columns-3', pageType: 'content', sentAt: null, published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'p3', tabNumeral: 'III', tabLabel: 'Science & Arts',     pageOrder: 3, slug: 'science-arts',       layout: 'columns-3', pageType: 'content', sentAt: null, published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
+  { id: 'p4', tabNumeral: 'IV',  tabLabel: 'Sport & Letters',    pageOrder: 4, slug: 'sport-letters',      layout: 'columns-3', pageType: 'content', sentAt: null, published: true, showInNav: true, blocks: [], columnRatios: null, sectionLabel: null, footerLeft: null, footerCenter: null, footerRight: null, editionDate: null, volume: null, issueNumber: null, mastheadBar: null, taglineRow: null, publishAt: null, seoTitle: null, seoDescription: null, seoImage: null, customCss: null, customJs: null, createdAt: new Date(), updatedAt: new Date() },
 ]
 
 
-export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, mastheadLogoUrl, masthead: mh, products = [], currency = 'USD', currentUser = null }: Props) {
+export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, mastheadLogoUrl, masthead: mh, products = [], currency = 'USD', currentUser = null, headerPageId, headerBlocks = [] }: Props) {
   const m = { ...DEFAULT_MASTHEAD, ...mh }
   const activePages = pages.length > 0 ? pages : DEFAULT_PAGES
   const navPages = activePages.map((p) => ({ id: p.id, tabNumeral: p.tabNumeral, tabLabel: p.tabLabel, pageOrder: p.pageOrder, showInNav: p.showInNav }))
 
   return (
     <div className="shell">
+      {headerBlocks.length > 0 && headerPageId && (
+        <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--ink-faded)' }}>
+          <CmsBlockArea
+            pageId={headerPageId}
+            initialBlocks={headerBlocks}
+            columnCount={1}
+            layout="columns-1"
+            isPlaceholder={false}
+            products={products}
+            currency={currency}
+          />
+        </div>
+      )}
       <div className="site-header">
         <div className="page-masthead">
           <div className="tagline-row">
@@ -112,6 +128,8 @@ export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, ma
                     blockKey: b.blockKey,
                     overlayOf: b.overlayOf,
                     overlayPosition: b.overlayPosition,
+                    overlayOffsetX: b.overlayOffsetX,
+                    overlayOffsetY: b.overlayOffsetY,
                   }))}
                   columnCount={columnCount}
                   layout={p.layout}
