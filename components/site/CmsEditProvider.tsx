@@ -34,10 +34,19 @@ function blocksMapFromPages(pages: CmsPageMeta[]): Record<string, EditBlock[]> {
   return map
 }
 
+function rawBlocksMapFromPages(pages: CmsPageMeta[]): Record<string, EditBlock[]> {
+  const map: Record<string, EditBlock[]> = {}
+  for (const p of pages) map[p.id] = p.blocks
+  return map
+}
+
 export function CmsEditProvider({ children, pages }: Props) {
   const [isEditMode, setIsEditMode] = useState(false)
   const [currentPageId, setCurrentPageId] = useState<string | null>(pages[0]?.id ?? null)
-  const [pageBlocks, setPageBlocksState] = useState<Record<string, EditBlock[]>>(() => blocksMapFromPages(pages))
+  // Seeded with the raw server-fetched blocks (no client-only randomUUID backfill) so
+  // the very first client render matches SSR exactly — see enterEditMode, which is the
+  // only place blockKey backfill actually needs to have happened before it's used.
+  const [pageBlocks, setPageBlocksState] = useState<Record<string, EditBlock[]>>(() => rawBlocksMapFromPages(pages))
   const [dirtyPages, setDirtyPages] = useState<Set<string>>(new Set())
   const [isSaving, setIsSaving] = useState(false)
 

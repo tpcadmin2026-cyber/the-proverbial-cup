@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CmsEditContext, type EditBlock } from '@/components/site/CmsEditContext'
 import { EditablePanel, type ProductSummary } from '@/components/site/CmsBlockArea'
 
 function withBlockKeys(blocks: EditBlock[]): EditBlock[] {
   return blocks.map((b) => (b.blockKey ? b : { ...b, blockKey: crypto.randomUUID() }))
+}
+
+function needsBlockKeys(blocks: EditBlock[]): boolean {
+  return blocks.some((b) => !b.blockKey)
 }
 
 interface Props {
@@ -27,9 +31,18 @@ interface Props {
 // (and therefore the whole block editor: drag/drop, overlays, spans) already expects.
 export function HeaderFooterEditor({ pageId, label, helpText, initialBlocks, columnCount, layout, products, currency }: Props) {
   const router = useRouter()
-  const [blocks, setBlocks] = useState<EditBlock[]>(() => withBlockKeys(initialBlocks))
+  // Blocks saved before the overlay feature existed have no blockKey yet. Backfilling
+  // them with crypto.randomUUID() must happen client-only, after mount — doing it in
+  // the initial state would run once during SSR and again during hydration, producing
+  // two different random values and triggering a hydration mismatch.
+  const [blocks, setBlocks] = useState<EditBlock[]>(initialBlocks)
   const [isDirty, setIsDirty] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    if (needsBlockKeys(initialBlocks)) setBlocks(withBlockKeys(initialBlocks))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const setPageBlocks = useCallback((_pageId: string, next: EditBlock[]) => {
     setBlocks(next)
