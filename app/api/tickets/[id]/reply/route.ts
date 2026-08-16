@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { db } from '@/lib/db'
 import { isEnabled } from '@/lib/features'
+import { getSetting } from '@/lib/settings'
+import { sendTicketNotificationEmail } from '@/lib/auth-utils'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await isEnabled('support_tickets')) return NextResponse.json({ error: 'Support tickets are not enabled.' }, { status: 403 })
@@ -38,6 +40,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Move back to open if resolved/waiting so admin sees it again
     if (['resolved', 'waiting'].includes(ticket.status)) {
       await db.supportTicket.update({ where: { id }, data: { status: 'open', updatedAt: new Date() } })
+    }
+
+    const notifyEmail = await getSetting<string>('site.contactEmail', '')
+    if (notifyEmail) {
+      const baseUrl = req.nextUrl.origin
+      await sendTicketNotificationEmail({
+        to: notifyEmail,
+        kind: 'reply',
+        subject: ticket.subject,
+        message: body.trim(),
+        fromName: ticket.customerName || ticket.customerEmail,
+        ticketUrl: `${baseUrl}/admin/support/tickets/${id}`,
+      }).catch(console.error)
     }
 
     return NextResponse.json({ success: true })

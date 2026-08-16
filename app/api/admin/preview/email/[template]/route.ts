@@ -69,6 +69,17 @@ export async function GET(_req: NextRequest, { params }: { params: { template: s
       })
       break
     }
+    case 'newsletterConfirm': {
+      const { NewsletterConfirmation } = await import('@/emails/NewsletterConfirmation')
+      element = React.createElement(NewsletterConfirmation, {
+        name: 'Archibald Pemberton',
+        confirmUrl: `${BASE}/api/newsletter/confirm?token=preview_token_example&email=reader%40example.com`,
+        siteName,
+        footerText,
+        ...overrides,
+      })
+      break
+    }
     case 'order': {
       const { OrderConfirmation } = await import('@/emails/OrderConfirmation')
       element = React.createElement(OrderConfirmation, {

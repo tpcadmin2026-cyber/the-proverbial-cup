@@ -2,7 +2,7 @@ import { getSetting } from '@/lib/settings'
 import { SiteFooter } from './SiteFooter'
 
 export async function FooterWrapper() {
-  const [siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog] = await Promise.all([
+  const [siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog, showAccountLink] = await Promise.all([
     getSetting<string>('site.name',             'The Victorian Illustrated Gazette'),
     getSetting<string>('site.copyrightText',    '© The Victorian Illustrated Gazette. All rights reserved.'),
     getSetting<string>('site.contactEmail',     ''),
@@ -13,6 +13,7 @@ export async function FooterWrapper() {
     getSetting<string>('site.social.instagram', ''),
     getSetting<string>('site.social.facebook',  ''),
     getSetting<boolean>('changelog.public',     false),
+    getSetting<boolean>('site.showAccountLinkInFooter', true),
   ])
 
   return (
@@ -27,6 +28,7 @@ export async function FooterWrapper() {
       instagram={instagram}
       facebook={facebook}
       showChangelog={showChangelog}
+      showAccountLink={showAccountLink}
     />
   )
 }

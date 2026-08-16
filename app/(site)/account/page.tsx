@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { db } from '@/lib/db'
@@ -38,6 +39,7 @@ export default async function AccountPage() {
   ])
 
   return (
+    <Suspense>
     <AccountPortal
       user={{
         id: user.id,
@@ -75,5 +77,6 @@ export default async function AccountPage() {
       siteName={siteName}
       currency={currency}
     />
+    </Suspense>
   )
 }

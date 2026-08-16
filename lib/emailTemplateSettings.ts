@@ -60,6 +60,16 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
     ],
   },
   {
+    templateKey: 'newsletterConfirm',
+    settingPrefix: 'emailTemplates.newsletterConfirm',
+    label: 'Newsletter confirmation',
+    fields: [
+      { key: 'heading', label: 'Heading', default: 'Confirm Your Subscription' },
+      { key: 'subheading', label: 'Subheading', default: '— Despatches from the Gazette —' },
+      { key: 'intro', label: 'Intro paragraph', default: 'Thank you for enrolling in our correspondence list. Please confirm your subscription by following the link below — you\'ll receive nothing further until you do.', multiline: true },
+    ],
+  },
+  {
     templateKey: 'order',
     settingPrefix: 'emailTemplates.order',
     label: 'Order confirmation',

@@ -33,17 +33,23 @@ export default async function SitePage() {
     )
   }
 
-  // Check if visitor is an admin (enables on-page editor)
+  // Check if visitor is an admin (enables on-page editor), and load basic
+  // profile info for the "Account" block (name/email/plan — nothing sensitive).
   const cookieStore = await cookies()
   const token = cookieStore.get('authjs.session-token')?.value
   let isAdmin = false
+  let currentUser: { name: string | null; email: string; planName: string | null } | null = null
   if (token) {
     const session = await db.session.findUnique({
       where: { sessionToken: token },
-      select: { expires: true, user: { select: { role: true } } },
+      select: {
+        expires: true,
+        user: { select: { name: true, email: true, role: true, subscription: { select: { plan: { select: { name: true } } } } } },
+      },
     })
-    if (session && session.expires > new Date() && isAdminRole(session.user.role)) {
-      isAdmin = true
+    if (session && session.expires > new Date()) {
+      if (isAdminRole(session.user.role)) isAdmin = true
+      currentUser = { name: session.user.name, email: session.user.email, planName: session.user.subscription?.plan.name ?? null }
     }
   }
 
@@ -99,6 +105,7 @@ export default async function SitePage() {
       masthead={{ taglineLeft, taglineCenter, taglineRight, motto, editionDate, volume, issueNumber, editionLabel, establishedBy }}
       products={products}
       currency={currency}
+      currentUser={currentUser}
     />
   )
 
@@ -117,6 +124,9 @@ export default async function SitePage() {
         colSpan: b.colSpan ?? 1,
         visible: b.visible,
         blockOrder: b.blockOrder,
+        blockKey: b.blockKey,
+        overlayOf: b.overlayOf,
+        overlayPosition: b.overlayPosition,
       })),
     }))
     return <CmsEditProvider pages={editorPages}>{template}</CmsEditProvider>

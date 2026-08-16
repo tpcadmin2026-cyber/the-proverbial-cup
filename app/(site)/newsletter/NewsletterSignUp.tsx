@@ -9,9 +9,10 @@ interface Props {
   heading: string
   subheading: string
   successMessage: string
+  confirmedParam?: string
 }
 
-export function NewsletterSignUp({ siteName, heading, subheading, successMessage }: Props) {
+export function NewsletterSignUp({ siteName, heading, subheading, successMessage, confirmedParam }: Props) {
   const [form, setForm] = useState({ name: '', email: '' })
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
@@ -67,17 +68,32 @@ export function NewsletterSignUp({ siteName, heading, subheading, successMessage
         <div className="bg-white border border-[#c8c4a8] rounded-lg shadow-md overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-[#35291C] via-[#C4AB77] to-[#35291C]" />
 
-          {status === 'success' ? (
+          {confirmedParam === '1' ? (
             <div className="px-8 py-12 text-center">
               <div className="text-4xl text-[#C4AB77] mb-4">✦</div>
-              <p className="font-playfair text-xl text-[#35291C] mb-2">Enrolled</p>
+              <p className="font-playfair text-xl text-[#35291C] mb-2">Subscription Confirmed</p>
+              <p className="font-baskerville italic text-[#4B4C44] text-lg">You're all set — despatches will begin arriving in your correspondence box.</p>
+              <a href="/" className="inline-block mt-6 text-sm text-[#C4AB77] hover:underline">
+                ← Return to The Gazette
+              </a>
+            </div>
+          ) : status === 'success' ? (
+            <div className="px-8 py-12 text-center">
+              <div className="text-4xl text-[#C4AB77] mb-4">✦</div>
+              <p className="font-playfair text-xl text-[#35291C] mb-2">Almost There</p>
               <p className="font-baskerville italic text-[#4B4C44] text-lg">{successMessage}</p>
+              <p className="text-sm text-[#4B4C44] mt-3">Please check your inbox and confirm your subscription — we'll send nothing further until you do.</p>
               <a href="/" className="inline-block mt-6 text-sm text-[#C4AB77] hover:underline">
                 ← Return to The Gazette
               </a>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="px-8 py-8 space-y-5">
+              {confirmedParam === '0' && (
+                <p className="text-sm text-[#7A564C] bg-red-50 border border-red-200 rounded px-3 py-2">
+                  That confirmation link is invalid or has already been used. You're welcome to sign up again below.
+                </p>
+              )}
               <div>
                 <label className="block text-xs font-semibold text-[#4B4C44] uppercase tracking-wider mb-1.5">
                   Your name

@@ -10,6 +10,9 @@ export interface EditBlock {
   colSpan: number
   visible: boolean
   blockOrder: number
+  blockKey?: string | null
+  overlayOf?: string | null
+  overlayPosition?: string | null
 }
 
 export interface CmsEditContextValue {

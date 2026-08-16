@@ -346,6 +346,101 @@ export async function sendNewOrderAdminEmail({
   })
 }
 
+export async function sendNewsletterConfirmationEmail({
+  email,
+  name,
+  confirmUrl,
+}: {
+  email: string
+  name?: string
+  confirmUrl: string
+}) {
+  const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const overrides = await getEmailTemplateOverrides('newsletterConfirm', siteName)
+  const { NewsletterConfirmation } = await import('@/emails/NewsletterConfirmation')
+  await sendHtmlEmail({
+    to:      email,
+    subject: `Confirm your subscription to ${siteName}`,
+    react:   React.createElement(NewsletterConfirmation, {
+      name,
+      confirmUrl,
+      siteName,
+      footerText: footerText || undefined,
+      logoUrl: logoUrl || undefined,
+      ...overrides,
+    }),
+  })
+}
+
+export async function sendGiftNotificationEmail({
+  email,
+  recipientName,
+  companyName,
+  planName,
+  note,
+  alreadyActive,
+  baseUrl,
+}: {
+  email: string
+  recipientName?: string
+  companyName: string
+  planName: string
+  note?: string
+  alreadyActive: boolean
+  baseUrl: string
+}) {
+  const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const { GiftNotification } = await import('@/emails/GiftNotification')
+  await sendHtmlEmail({
+    to:      email,
+    subject: alreadyActive ? `Your gift subscription from ${companyName} is active` : `${companyName} sent you a gift subscription`,
+    react:   React.createElement(GiftNotification, {
+      recipientName,
+      companyName,
+      planName,
+      note,
+      alreadyActive,
+      ctaUrl: alreadyActive ? `${baseUrl}/account` : `${baseUrl}/signup`,
+      siteName,
+      footerText: footerText || undefined,
+      logoUrl: logoUrl || undefined,
+    }),
+  })
+}
+
+export async function sendTicketNotificationEmail({
+  to,
+  kind,
+  subject,
+  message,
+  fromName,
+  ticketUrl,
+}: {
+  to: string
+  kind: 'new' | 'reply'
+  subject: string
+  message: string
+  fromName?: string
+  ticketUrl: string
+}) {
+  const { siteName, footerText, logoUrl } = await getEmailConfig()
+  const { TicketNotification } = await import('@/emails/TicketNotification')
+  await sendHtmlEmail({
+    to,
+    subject: kind === 'new' ? `New enquiry: ${subject}` : `New reply: ${subject}`,
+    react:   React.createElement(TicketNotification, {
+      kind,
+      subject,
+      message,
+      fromName,
+      ticketUrl,
+      siteName,
+      footerText: footerText || undefined,
+      logoUrl: logoUrl || undefined,
+    }),
+  })
+}
+
 export async function sendBackupNotificationEmail({
   email,
   trigger,

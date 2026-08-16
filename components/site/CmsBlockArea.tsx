@@ -35,11 +35,12 @@ export const BLOCK_TYPES = [
   { value: 'table',        group: 'Data',       label: 'Table',           description: 'Data table with header row', icon: '⊞' },
   // Commerce
   { value: 'featured_products', group: 'Commerce', label: 'Featured products', description: 'Promote up to 6 products from your shop in a row — pair with "Span" for full width', icon: '⊡' },
+  { value: 'account_widget',    group: 'Commerce', label: 'Account',           description: 'Sign in/sign up prompt for guests, or a profile summary with quick links for logged-in visitors', icon: '◈' },
   // Layout
   { value: 'section_label',group: 'Layout',     label: 'Section label',   description: 'Bold section heading with decorative rule', icon: '§' },
   { value: 'rule',         group: 'Layout',     label: 'Rule / divider',  description: 'Ornamental horizontal dividing rule', icon: '—' },
   { value: 'ornament',     group: 'Layout',     label: 'Ornament',        description: 'Decorative Victorian symbol or dingbat', icon: '❧' },
-  { value: 'spacer',       group: 'Layout',     label: 'Spacer',          description: 'Blank vertical space between blocks', icon: '↕' },
+  { value: 'spacer',       group: 'Layout',     label: 'Spacer',          description: 'Blank space to fill a gap — place in one column, or set Span to blank out a wider band', icon: '↕' },
   // Advanced
   { value: 'html',         group: 'Advanced',   label: 'Custom HTML',     description: 'Raw HTML — embeds, iframes, custom code', icon: '</>' },
 ] as const
@@ -53,6 +54,12 @@ export interface ProductSummary {
   priceInCents: number
 }
 
+export interface CurrentUser {
+  name: string | null
+  email: string
+  planName: string | null
+}
+
 const ORNAMENT_PRESETS = [
   '❧ ✦ ❧', '⸻ ✦ ⸻', '✦ ✦ ✦', '❦', '☙ ❧', '◈', '⁂', '✤', '❊', '⁕ ⁕ ⁕',
 ]
@@ -61,15 +68,29 @@ function parseJson<T>(str: string, fallback: T): T {
   try { return JSON.parse(str) as T } catch { return fallback }
 }
 
+/** Short human label for a block, used in the "overlay on" target picker. */
+function blockLabel(b: EditBlock): string {
+  const typeDef = BLOCK_TYPES.find((t) => t.value === b.blockType)
+  const name = typeDef?.label ?? b.blockType
+  if (b.blockType === 'image') {
+    const d = parseJson<{ alt?: string }>(b.content, {})
+    return d.alt ? `${name} — "${d.alt}"` : name
+  }
+  const snippet = (b.content ?? '').replace(/<[^>]+>/g, '').trim().slice(0, 30)
+  return snippet ? `${name} — "${snippet}${snippet.length === 30 ? '…' : ''}"` : name
+}
+
 function formatPrice(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
 }
 
 // ─── Static block renderer ───────────────────────────────────────────────────
 
-export function StaticBlock({ block, products = [], currency = 'USD' }: { block: EditBlock; products?: ProductSummary[]; currency?: string }) {
+export function StaticBlock({ block, products = [], currency = 'USD', currentUser = null }: { block: EditBlock; products?: ProductSummary[]; currency?: string; currentUser?: CurrentUser | null }) {
   const text = block.content ?? ''
   switch (block.blockType as BlockType) {
+    case 'account_widget':
+      return <AccountWidget currentUser={currentUser} />
     case 'headline':
       return <div className="article-headline" style={{ marginBottom: '0.5em' }}>{text}</div>
     case 'subheadline':
@@ -255,6 +276,101 @@ function getVideoEmbedUrl(url: string): string | null {
   }
 }
 
+// ─── Account widget block ─────────────────────────────────────────────────────
+// Shows a sign-in/sign-up prompt when logged out, or a small account summary
+// with quick links when logged in. currentUser is resolved server-side once
+// per page load and threaded down — no client-side session fetch needed.
+
+function AccountWidget({ currentUser }: { currentUser?: CurrentUser | null }) {
+  const boxStyle: React.CSSProperties = {
+    margin: '0.75em 0', padding: '14px 16px',
+    border: '1px solid var(--ink-faded)', borderRadius: '3px',
+    textAlign: 'center',
+  }
+  const linkStyle: React.CSSProperties = {
+    display: 'inline-block', margin: '0 8px', fontSize: '0.8em',
+    color: 'var(--red)', textDecoration: 'underline',
+  }
+
+  if (!currentUser) {
+    return (
+      <div style={boxStyle}>
+        <div className="body-text" style={{ marginBottom: '8px' }}>Have an account?</div>
+        <a href="/login" style={linkStyle}>Sign in</a>
+        <span style={{ color: 'var(--ink-faded)' }}>·</span>
+        <a href="/signup" style={linkStyle}>Create an account</a>
+      </div>
+    )
+  }
+
+  return (
+    <div style={boxStyle}>
+      <div className="body-text" style={{ marginBottom: '8px' }}>
+        Welcome back, {currentUser.name || currentUser.email}
+        {currentUser.planName && <> — <em>{currentUser.planName}</em></>}
+      </div>
+      <a href="/account" style={linkStyle}>My Profile</a>
+      <span style={{ color: 'var(--ink-faded)' }}>·</span>
+      <a href="/account?tab=orders" style={linkStyle}>Purchase History</a>
+      <span style={{ color: 'var(--ink-faded)' }}>·</span>
+      <a href="/account?tab=overview" style={linkStyle}>Subscription</a>
+    </div>
+  )
+}
+
+// ─── Overlay positioning ─────────────────────────────────────────────────────
+// A block can be layered on top of another (e.g. a button over an image) instead
+// of taking its own place in the column flow. `overlayOf` stores the target
+// block's `blockKey` — a client-generated id that (unlike `id`) survives the
+// save cycle, since the page-save route deletes and recreates every block row.
+
+export const OVERLAY_POSITIONS = [
+  { value: 'top-left',      label: '↖' }, { value: 'top-center',    label: '↑' }, { value: 'top-right',     label: '↗' },
+  { value: 'middle-left',   label: '←' }, { value: 'center',        label: '•' }, { value: 'middle-right',  label: '→' },
+  { value: 'bottom-left',   label: '↙' }, { value: 'bottom-center', label: '↓' }, { value: 'bottom-right',  label: '↘' },
+] as const
+
+const OVERLAY_POSITION_STYLES: Record<string, React.CSSProperties> = {
+  'top-left':      { top: '10px', left: '10px' },
+  'top-center':    { top: '10px', left: '50%', transform: 'translateX(-50%)' },
+  'top-right':     { top: '10px', right: '10px' },
+  'middle-left':   { top: '50%', left: '10px', transform: 'translateY(-50%)' },
+  'center':        { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+  'middle-right':  { top: '50%', right: '10px', transform: 'translateY(-50%)' },
+  'bottom-left':   { bottom: '10px', left: '10px' },
+  'bottom-center': { bottom: '10px', left: '50%', transform: 'translateX(-50%)' },
+  'bottom-right':  { bottom: '10px', right: '10px' },
+}
+
+/** Groups blocks by the blockKey they overlay, keyed on target blockKey. */
+function groupOverlays(blocks: EditBlock[]): Map<string, EditBlock[]> {
+  const map = new Map<string, EditBlock[]>()
+  const keys = new Set(blocks.map((b) => b.blockKey).filter(Boolean))
+  for (const b of blocks) {
+    if (!b.overlayOf || !keys.has(b.overlayOf)) continue // orphaned overlay — target missing, render in normal flow instead
+    if (!map.has(b.overlayOf)) map.set(b.overlayOf, [])
+    map.get(b.overlayOf)!.push(b)
+  }
+  return map
+}
+
+function StaticBlockWithOverlays({ block, overlays, products, currency, currentUser }: {
+  block: EditBlock; overlays: EditBlock[]
+  products: ProductSummary[]; currency: string; currentUser?: CurrentUser | null
+}) {
+  if (overlays.length === 0) return <StaticBlock block={block} products={products} currency={currency} currentUser={currentUser} />
+  return (
+    <div style={{ position: 'relative' }}>
+      <StaticBlock block={block} products={products} currency={currency} currentUser={currentUser} />
+      {overlays.map((ov) => (
+        <div key={ov.id} style={{ position: 'absolute', zIndex: 5, ...(OVERLAY_POSITION_STYLES[ov.overlayPosition ?? 'center'] ?? OVERLAY_POSITION_STYLES.center) }}>
+          <StaticBlock block={ov} products={products} currency={currency} currentUser={currentUser} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 interface SpanCell { block: EditBlock; startCol: number; span: number }
 interface BlockRow {
   spans: SpanCell[]
@@ -318,16 +434,23 @@ function groupBlocksIntoRows(blocks: EditBlock[], columnCount: number): BlockRow
   return rows
 }
 
-function StaticBlocks({ blocks, columnCount, products, currency }: { blocks: EditBlock[]; columnCount: number; products: ProductSummary[]; currency: string }) {
+function StaticBlocks({ blocks, columnCount, products, currency, currentUser }: { blocks: EditBlock[]; columnCount: number; products: ProductSummary[]; currency: string; currentUser?: CurrentUser | null }) {
   const visible = blocks.filter((b) => b.visible)
   if (visible.length === 0) return null
-  if (columnCount === 1) return <div>{visible.map((b) => <StaticBlock key={b.id} block={b} products={products} currency={currency} />)}</div>
+
+  // Overlay blocks (e.g. a button layered on an image) are pulled out of the normal
+  // flow entirely and rendered inside their target block's wrapper instead.
+  const overlaysByTarget = groupOverlays(visible)
+  const overlaidIds = new Set(Array.from(overlaysByTarget.values()).flat().map((b) => b.id))
+  const flowBlocks = visible.filter((b) => !overlaidIds.has(b.id))
+
+  if (columnCount === 1) return <div>{flowBlocks.map((b) => <StaticBlockWithOverlays key={b.id} block={b} overlays={overlaysByTarget.get(b.blockKey ?? '') ?? []} products={products} currency={currency} currentUser={currentUser} />)}</div>
 
   // Blocks with colSpan 1 keep flowing in their own independent column stack, like a
   // newspaper. A block spanning 2+ columns shares its row with normal blocks in
   // whichever columns it doesn't cover (e.g. an image beside a text sidebar) — a row
   // only breaks when something would actually overlap what's already in it.
-  const rows = groupBlocksIntoRows(visible, columnCount)
+  const rows = groupBlocksIntoRows(flowBlocks, columnCount)
 
   return (
     <div>
@@ -335,12 +458,12 @@ function StaticBlocks({ blocks, columnCount, products, currency }: { blocks: Edi
         <div key={ri} style={{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)`, gap: '0 12px' }}>
           {row.spans.map(({ block, startCol, span }) => (
             <div key={block.id} style={{ gridColumn: `${startCol} / span ${span}`, gridRow: 1 }}>
-              <StaticBlock block={block} products={products} currency={currency} />
+              <StaticBlockWithOverlays block={block} overlays={overlaysByTarget.get(block.blockKey ?? '') ?? []} products={products} currency={currency} currentUser={currentUser} />
             </div>
           ))}
           {row.columns.map((colBlocks, ci) => colBlocks.length > 0 && (
             <div key={ci} style={{ gridColumn: `${ci + 1} / span 1`, gridRow: 1 }}>
-              {colBlocks.map((b) => <StaticBlock key={b.id} block={b} products={products} currency={currency} />)}
+              {colBlocks.map((b) => <StaticBlockWithOverlays key={b.id} block={b} overlays={overlaysByTarget.get(b.blockKey ?? '') ?? []} products={products} currency={currency} currentUser={currentUser} />)}
             </div>
           ))}
         </div>
@@ -547,8 +670,9 @@ function TableEditor({ value, onChange }: { value: string; onChange: (v: string)
 
 const MAX_FEATURED_PRODUCTS = 6
 
-function BlockEditModal({ block, onSave, onClose, columnCount, products, currency }: {
+function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, products, currency }: {
   block: EditBlock
+  allBlocks: EditBlock[]
   onSave: (updated: EditBlock) => void
   onClose: () => void
   columnCount: number
@@ -558,6 +682,12 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
   const [type, setType] = useState<string>(block.blockType)
   const [column, setColumn] = useState(block.column)
   const [colSpan, setColSpan] = useState(block.colSpan ?? 1)
+  const [overlayOf, setOverlayOf] = useState<string>(block.overlayOf ?? '')
+  const [overlayPosition, setOverlayPosition] = useState<string>(block.overlayPosition ?? 'center')
+
+  // Any other block on the page can be an overlay target — except blocks that are
+  // themselves overlaying something (no overlay-on-overlay chains) or this block itself.
+  const overlayTargets = allBlocks.filter((b) => b.id !== block.id && b.blockKey && !b.overlayOf)
 
   // Simple text content
   const [text, setText] = useState(() => {
@@ -638,7 +768,11 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
   }
 
   function handleSave() {
-    onSave({ ...block, blockType: type, content: buildContent(), column, colSpan })
+    onSave({
+      ...block, blockType: type, content: buildContent(), column, colSpan,
+      overlayOf: overlayOf || null,
+      overlayPosition: overlayOf ? overlayPosition : null,
+    })
     onClose()
   }
 
@@ -690,7 +824,7 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
                 </select>
               </div>
             )}
-            {columnCount > 1 && !['rule', 'spacer'].includes(type) && (
+            {columnCount > 1 && type !== 'rule' && (
               <div style={{ width: '110px' }}>
                 <FieldLabel>Span</FieldLabel>
                 <select value={colSpan} onChange={(e) => setColSpan(Number(e.target.value))} style={selectStyle}>
@@ -713,6 +847,45 @@ function BlockEditModal({ block, onSave, onClose, columnCount, products, currenc
             <p style={{ margin: 0, fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#7A564C', backgroundColor: '#f5efe3', border: '1px solid #e8dcc4', borderRadius: '4px', padding: '6px 10px' }}>
               This block will break out of column {column}'s flow and span {colSpan} columns wide. Columns resume stacking independently below it.
             </p>
+          )}
+
+          {/* ── OVERLAY ── */}
+          {overlayTargets.length > 0 && (
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ flex: 1 }}>
+                <FieldLabel>Overlay</FieldLabel>
+                <select value={overlayOf} onChange={(e) => setOverlayOf(e.target.value)} style={selectStyle}>
+                  <option value="">Normal block — own place in the layout</option>
+                  {overlayTargets.map((t) => (
+                    <option key={t.blockKey} value={t.blockKey ?? ''}>Layer on: {blockLabel(t)}</option>
+                  ))}
+                </select>
+                <HelpText>Places this block on top of another instead of in the normal flow — e.g. a button over an image.</HelpText>
+              </div>
+              {overlayOf && (
+                <div>
+                  <FieldLabel>Position</FieldLabel>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
+                    {OVERLAY_POSITIONS.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        onClick={() => setOverlayPosition(p.value)}
+                        title={p.value.replace('-', ' ')}
+                        style={{
+                          width: '30px', height: '30px', fontSize: '14px', lineHeight: 1,
+                          border: overlayPosition === p.value ? '2px solid #C4AB77' : '1px solid #c8c4a8',
+                          borderRadius: '4px', backgroundColor: overlayPosition === p.value ? 'rgba(196,171,119,0.15)' : 'white',
+                          cursor: 'pointer', color: '#4B4C44', padding: 0,
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* ── TEXT BLOCKS ── */}
@@ -1081,8 +1254,9 @@ function DroppableColumn({ dropId, col, colName, showLabel = true, isOver, child
 
 // ─── Visual sortable block (renders actual Victorian content) ─────────────────
 
-function VisualSortableBlock({ block, products, currency, onEdit, onDelete, onDuplicate, onToggleVisible }: {
+function VisualSortableBlock({ block, allBlocks, products, currency, onEdit, onDelete, onDuplicate, onToggleVisible }: {
   block: EditBlock
+  allBlocks: EditBlock[]
   products: ProductSummary[]
   currency: string
   onEdit: (block: EditBlock) => void
@@ -1094,6 +1268,7 @@ function VisualSortableBlock({ block, products, currency, onEdit, onDelete, onDu
   const [hovered, setHovered] = useState(false)
   const typeDef = BLOCK_TYPES.find((t) => t.value === block.blockType)
   const isFillImage = block.blockType === 'image' && (parseJson<{ fit?: string }>(block.content, {}).fit ?? 'fit') !== 'fit'
+  const overlayTarget = block.overlayOf ? allBlocks.find((b) => b.blockKey === block.overlayOf) : null
 
   return (
     <div
@@ -1109,7 +1284,7 @@ function VisualSortableBlock({ block, products, currency, onEdit, onDelete, onDu
         marginBottom: '2px',
         borderRadius: '2px',
         paddingTop: (block.colSpan ?? 1) > 1 ? '20px' : undefined,
-        outline: hovered && !isDragging ? '2px solid rgba(139,105,20,0.5)' : (block.colSpan ?? 1) > 1 ? '1px dashed rgba(122,86,76,0.5)' : '2px solid transparent',
+        outline: hovered && !isDragging ? '2px solid rgba(139,105,20,0.5)' : '2px solid transparent',
         outlineOffset: '1px',
       }}
     >
@@ -1122,6 +1297,19 @@ function VisualSortableBlock({ block, products, currency, onEdit, onDelete, onDu
           padding: '2px 6px', borderRadius: '3px', pointerEvents: 'none',
         }}>
           ↔ spans {block.colSpan}
+        </div>
+      )}
+
+      {/* Overlay indicator — this block won't take its own place in the layout;
+          it renders on top of its target on the published page. */}
+      {block.overlayOf && (
+        <div style={{
+          position: 'absolute', top: '3px', left: '3px', zIndex: 15,
+          backgroundColor: 'rgba(139,105,20,0.9)', color: '#E8E6D8',
+          fontFamily: 'Inter, sans-serif', fontSize: '9px', fontWeight: 700,
+          padding: '2px 6px', borderRadius: '3px', pointerEvents: 'none',
+        }}>
+          ⧉ overlay{overlayTarget ? ` → ${blockLabel(overlayTarget)}` : ' (target missing)'}
         </div>
       )}
 
@@ -1273,7 +1461,7 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
   function handleDuplicate(id: string) {
     const idx = blocks.findIndex((b) => b.id === id)
     if (idx === -1) return
-    const copy: EditBlock = { ...blocks[idx], id: `new-${Date.now()}` }
+    const copy: EditBlock = { ...blocks[idx], id: `new-${Date.now()}`, blockKey: crypto.randomUUID() }
     const next = [...blocks]
     next.splice(idx + 1, 0, copy)
     ctx.setPageBlocks(pageId, next)
@@ -1285,6 +1473,7 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
       blockType: type, content: '',
       column: col, colSpan: 1, visible: true,
       blockOrder: 0,
+      blockKey: crypto.randomUUID(),
     }
     let insertAt = blocks.length
     for (let i = blocks.length - 1; i >= 0; i--) {
@@ -1318,6 +1507,7 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
                 <SortableContext items={[block.id]} strategy={verticalListSortingStrategy}>
                   <VisualSortableBlock
                     block={block}
+                    allBlocks={blocks}
                     products={products}
                     currency={currency}
                     onEdit={setEditingBlock}
@@ -1354,6 +1544,7 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
                       <VisualSortableBlock
                         key={block.id}
                         block={block}
+                        allBlocks={blocks}
                         products={products}
                         currency={currency}
                         onEdit={setEditingBlock}
@@ -1394,6 +1585,7 @@ function EditablePanel({ pageId, columnCount, layout, products, currency }: { pa
       {editingBlock && (
         <BlockEditModal
           block={editingBlock}
+          allBlocks={blocks}
           onSave={handleEditSave}
           onClose={() => setEditingBlock(null)}
           columnCount={columnCount}
@@ -1415,9 +1607,10 @@ interface Props {
   isPlaceholder: boolean
   products?: ProductSummary[]
   currency?: string
+  currentUser?: CurrentUser | null
 }
 
-export function CmsBlockArea({ pageId, initialBlocks, columnCount, layout, isPlaceholder, products = [], currency = 'USD' }: Props) {
+export function CmsBlockArea({ pageId, initialBlocks, columnCount, layout, isPlaceholder, products = [], currency = 'USD', currentUser = null }: Props) {
   const ctx = useContext(CmsEditContext)
   const isEditMode = ctx?.isEditMode ?? false
   const isCurrentPage = ctx?.currentPageId === pageId
@@ -1430,7 +1623,7 @@ export function CmsBlockArea({ pageId, initialBlocks, columnCount, layout, isPla
         </p>
       )
     }
-    return <StaticBlocks blocks={initialBlocks} columnCount={columnCount} products={products} currency={currency} />
+    return <StaticBlocks blocks={initialBlocks} columnCount={columnCount} products={products} currency={currency} currentUser={currentUser} />
   }
 
   // Edit mode — render the visual in-place editor (no dark overlay, blocks look as published)

@@ -37,6 +37,7 @@ interface Props {
   masthead?: Masthead
   products?: ProductSummary[]
   currency?: string
+  currentUser?: { name: string | null; email: string; planName: string | null } | null
 }
 
 const DEFAULT_PAGES: PageWithBlocks[] = [
@@ -47,7 +48,7 @@ const DEFAULT_PAGES: PageWithBlocks[] = [
 ]
 
 
-export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, mastheadLogoUrl, masthead: mh, products = [], currency = 'USD' }: Props) {
+export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, mastheadLogoUrl, masthead: mh, products = [], currency = 'USD', currentUser = null }: Props) {
   const m = { ...DEFAULT_MASTHEAD, ...mh }
   const activePages = pages.length > 0 ? pages : DEFAULT_PAGES
   const navPages = activePages.map((p) => ({ id: p.id, tabNumeral: p.tabNumeral, tabLabel: p.tabLabel, pageOrder: p.pageOrder, showInNav: p.showInNav }))
@@ -108,12 +109,16 @@ export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, ma
                     colSpan: b.colSpan ?? 1,
                     visible: b.visible,
                     blockOrder: b.blockOrder,
+                    blockKey: b.blockKey,
+                    overlayOf: b.overlayOf,
+                    overlayPosition: b.overlayPosition,
                   }))}
                   columnCount={columnCount}
                   layout={p.layout}
                   isPlaceholder={isPlaceholder || !hasBlocks}
                   products={products}
                   currency={currency}
+                  currentUser={currentUser}
                 />
               </div>
 

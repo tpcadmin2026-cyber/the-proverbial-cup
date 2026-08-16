@@ -26,13 +26,16 @@ export async function POST(req: NextRequest) {
         published: published ?? false,
         showInNav: showInNav ?? true,
         blocks: {
-          create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; colSpan?: number; visible?: boolean; blockOrder: number }) => ({
+          create: (blocks ?? []).map((b: { blockType: string; content?: string; column?: number; colSpan?: number; visible?: boolean; blockOrder: number; blockKey?: string | null; overlayOf?: string | null; overlayPosition?: string | null }) => ({
             blockType: b.blockType,
             content: b.content ?? null,
             column: b.column ?? 1,
             colSpan: b.colSpan ?? 1,
             visible: b.visible ?? true,
             blockOrder: b.blockOrder,
+            blockKey: b.blockKey ?? null,
+            overlayOf: b.overlayOf ?? null,
+            overlayPosition: b.overlayPosition ?? null,
           })),
         },
       },

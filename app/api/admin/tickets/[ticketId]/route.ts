@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
+import { sendTicketNotificationEmail } from '@/lib/auth-utils'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ ticketId: string }> }) {
   try {
@@ -10,14 +11,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tic
 
     if (action === 'reply') {
       if (!body?.trim()) return NextResponse.json({ error: 'Reply body is required.' }, { status: 400 })
-      await db.ticketMessage.create({
+      const ticket = await db.ticketMessage.create({
         data: { ticketId, body, author: author ?? 'admin', isAdmin: true },
+        include: { ticket: true },
       })
       // Move to in_progress if still open
       await db.supportTicket.update({
         where: { id: ticketId },
         data: { status: 'in_progress', updatedAt: new Date() },
       })
+
+      const baseUrl = req.nextUrl.origin
+      await sendTicketNotificationEmail({
+        to: ticket.ticket.customerEmail,
+        kind: 'reply',
+        subject: ticket.ticket.subject,
+        message: body.trim(),
+        fromName: author ?? 'Our team',
+        ticketUrl: `${baseUrl}/support/${ticketId}`,
+      }).catch(console.error)
+
       return NextResponse.json({ success: true })
     }
 

@@ -3,8 +3,54 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { NavItem } from '@prisma/client'
+import {
+  DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext, useSortable, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface CmsPageRef { id: string; tabLabel: string; tabNumeral: string; pageOrder: number; published: boolean; showInNav: boolean }
+
+type Tab =
+  | { kind: 'page'; id: string; label: string; numeral: string; order: number; published: boolean; showInNav: boolean }
+  | { kind: 'link'; id: string; label: string; numeral: string; order: number; href: string; visible: boolean }
+
+function SortableTabPill({ tab }: { tab: Tab }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `${tab.kind}-${tab.id}` })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  }
+  const pageHidden = tab.kind === 'page' && (!tab.published || !tab.showInNav)
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`px-3 py-1.5 rounded text-xs font-medium border cursor-grab active:cursor-grabbing select-none touch-none ${
+        tab.kind === 'page'
+          ? pageHidden
+            ? 'bg-white border-dashed border-[#c8c4a8] text-[#C4AB77]'
+            : 'bg-[#f5f2e8] border-[#c8c4a8] text-[#4B4C44]'
+          : tab.visible
+          ? 'bg-[#35291C] border-[#35291C] text-[#E8E6D8]'
+          : 'bg-white border-dashed border-[#c8c4a8] text-[#C4AB77]'
+      }`}
+    >
+      <span className="opacity-50 mr-1">⠿</span>
+      <span className="opacity-60 mr-1">{tab.numeral}</span>
+      {tab.label}
+      {tab.kind === 'page' && !tab.published && <span className="ml-1 opacity-50">(draft)</span>}
+      {tab.kind === 'page' && tab.published && !tab.showInNav && <span className="ml-1 opacity-50">(hidden from nav)</span>}
+      {tab.kind === 'link' && !tab.visible && <span className="ml-1 opacity-50">(hidden)</span>}
+    </div>
+  )
+}
 
 interface Props {
   navItems: NavItem[]
@@ -28,11 +74,60 @@ export function NavEditor({ navItems: initial, pages: initialPages }: Props) {
   const [pages, setPages] = useState<CmsPageRef[]>(initialPages)
   const [saving, setSaving] = useState<string | null>(null)
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
   // All tabs in the order they'll appear: pages + nav items, sorted by their order values
-  const allTabs = [
+  const allTabs: Tab[] = [
     ...pages.map(p => ({ kind: 'page' as const, id: p.id, label: p.tabLabel, numeral: p.tabNumeral, order: p.pageOrder, published: p.published, showInNav: p.showInNav })),
     ...items.map(n => ({ kind: 'link' as const, id: n.id, label: n.label, numeral: n.numeral, order: n.navOrder, href: n.href, visible: n.visible })),
   ].sort((a, b) => a.order - b.order)
+
+  async function reorderTabs(newTabs: Tab[]) {
+    setSaving('reorder')
+    const updates: Promise<Response>[] = []
+    const newPages = [...pages]
+    const newItems = [...items]
+
+    newTabs.forEach((tab, i) => {
+      const newOrder = (i + 1) * 10
+      if (tab.order === newOrder) return
+      if (tab.kind === 'page') {
+        const idx = newPages.findIndex(p => p.id === tab.id)
+        if (idx !== -1) newPages[idx] = { ...newPages[idx], pageOrder: newOrder }
+        updates.push(fetch(`/api/admin/cms/pages/${tab.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageOrder: newOrder }),
+        }))
+      } else {
+        const idx = newItems.findIndex(n => n.id === tab.id)
+        if (idx !== -1) newItems[idx] = { ...newItems[idx], navOrder: newOrder }
+        updates.push(fetch(`/api/admin/navigation/${tab.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ navOrder: newOrder }),
+        }))
+      }
+    })
+
+    setPages(newPages)
+    setItems(newItems)
+    await Promise.all(updates)
+    setSaving(null)
+    router.refresh()
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = allTabs.findIndex(t => `${t.kind}-${t.id}` === active.id)
+    const newIndex = allTabs.findIndex(t => `${t.kind}-${t.id}` === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    void reorderTabs(arrayMove(allTabs, oldIndex, newIndex))
+  }
 
   async function save(id: string, patch: Partial<NavItem>) {
     setSaving(id)
@@ -95,38 +190,25 @@ export function NavEditor({ navItems: initial, pages: initialPages }: Props) {
   return (
     <div className="max-w-4xl space-y-8">
 
-      {/* Live preview of the tab order */}
+      {/* Live, drag-to-reorder preview of the tab order */}
       <div className="bg-white border border-[#c8c4a8] rounded-lg overflow-hidden">
         <div className="h-0.5 bg-gradient-to-r from-[#35291C] via-[#C4AB77] to-[#35291C]" />
         <div className="px-5 py-4">
-          <div className="text-xs font-semibold text-[#C4AB77] uppercase tracking-widest mb-3">Tab order preview</div>
-          <div className="text-xs text-[#C4AB77] mb-3">This shows how all tabs will appear in the navigation, left to right. Newspaper pages are shown in grey.</div>
-          <div className="flex flex-wrap gap-2">
-            {allTabs.map(tab => {
-              const pageHidden = tab.kind === 'page' && (!tab.published || !tab.showInNav)
-              return (
-                <div
-                  key={tab.id}
-                  className={`px-3 py-1.5 rounded text-xs font-medium border ${
-                    tab.kind === 'page'
-                      ? pageHidden
-                        ? 'bg-white border-dashed border-[#c8c4a8] text-[#C4AB77]'
-                        : 'bg-[#f5f2e8] border-[#c8c4a8] text-[#4B4C44]'
-                      : tab.visible
-                      ? 'bg-[#35291C] border-[#35291C] text-[#E8E6D8]'
-                      : 'bg-white border-dashed border-[#c8c4a8] text-[#C4AB77]'
-                  }`}
-                >
-                  <span className="opacity-60 mr-1">{tab.numeral}</span>
-                  {tab.label}
-                  {tab.kind === 'page' && !tab.published && <span className="ml-1 opacity-50">(draft)</span>}
-                  {tab.kind === 'page' && tab.published && !tab.showInNav && <span className="ml-1 opacity-50">(hidden from nav)</span>}
-                  {tab.kind === 'link' && !tab.visible && <span className="ml-1 opacity-50">(hidden)</span>}
-                </div>
-              )
-            })}
-            {allTabs.length === 0 && <span className="text-xs text-[#C4AB77] italic">No tabs yet.</span>}
+          <div className="text-xs font-semibold text-[#C4AB77] uppercase tracking-widest mb-3 flex items-center gap-2">
+            Tab order
+            {saving === 'reorder' && <span className="text-[#C4AB77] normal-case font-normal italic">Saving…</span>}
           </div>
+          <div className="text-xs text-[#C4AB77] mb-3">Drag any tab to reorder it, left to right. This shows how all tabs will appear in the navigation. Newspaper pages are shown in grey.</div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={allTabs.map(t => `${t.kind}-${t.id}`)} strategy={horizontalListSortingStrategy}>
+              <div className="flex flex-wrap gap-2">
+                {allTabs.map(tab => (
+                  <SortableTabPill key={`${tab.kind}-${tab.id}`} tab={tab} />
+                ))}
+                {allTabs.length === 0 && <span className="text-xs text-[#C4AB77] italic">No tabs yet.</span>}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 

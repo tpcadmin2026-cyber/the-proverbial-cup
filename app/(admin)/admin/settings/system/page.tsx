@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { format } from 'date-fns'
+import pkg from '@/package.json'
 
 // Admin and Master Admin only — managers and employees cannot access this page
 async function requireAdminAccess() {
@@ -63,7 +64,7 @@ export default async function SystemPage() {
 
   // Package versions from env or hardcoded current values
   const versions = {
-    platform:  '0.1.0',
+    platform:  pkg.version,
     nextjs:    '14.2.4',
     prisma:    '5.22.0',
     node:      process.version,

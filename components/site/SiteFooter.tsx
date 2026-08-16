@@ -11,9 +11,10 @@ interface Props {
   instagram: string
   facebook: string
   showChangelog: boolean
+  showAccountLink: boolean
 }
 
-export function SiteFooter({ siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog }: Props) {
+export function SiteFooter({ siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog, showAccountLink }: Props) {
   const hasAddress = address.trim() !== ''
   const hasSocial = twitter || instagram || facebook
 
@@ -39,6 +40,9 @@ export function SiteFooter({ siteName, copyright, contactEmail, address, termsUr
           <Link href="/shop" style={{ color: 'var(--link-color)', textDecoration: 'none' }}>Shop</Link>
           <Link href="/help" style={{ color: 'var(--link-color)', textDecoration: 'none' }}>Help</Link>
           <Link href="/contact" style={{ color: 'var(--link-color)', textDecoration: 'none' }}>Contact</Link>
+          {showAccountLink && (
+            <Link href="/account" style={{ color: 'var(--link-color)', textDecoration: 'none' }}>My Account</Link>
+          )}
           {showChangelog && (
             <Link href="/changelog" style={{ color: 'var(--link-color)', textDecoration: 'none' }}>Updates</Link>
           )}

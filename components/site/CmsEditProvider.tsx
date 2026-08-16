@@ -20,14 +20,24 @@ interface Props {
 
 const HISTORY_LIMIT = 50
 
+// Every block needs a stable client-generated key so overlays (which reference a
+// target by this key, not by `id`) keep working across the save cycle — `id` gets
+// regenerated every save since the page-save route deletes and recreates all rows.
+// Older blocks saved before this feature existed won't have one yet, so backfill here.
+function withBlockKeys(blocks: EditBlock[]): EditBlock[] {
+  return blocks.map((b) => b.blockKey ? b : { ...b, blockKey: crypto.randomUUID() })
+}
+
+function blocksMapFromPages(pages: CmsPageMeta[]): Record<string, EditBlock[]> {
+  const map: Record<string, EditBlock[]> = {}
+  for (const p of pages) map[p.id] = withBlockKeys(p.blocks)
+  return map
+}
+
 export function CmsEditProvider({ children, pages }: Props) {
   const [isEditMode, setIsEditMode] = useState(false)
   const [currentPageId, setCurrentPageId] = useState<string | null>(pages[0]?.id ?? null)
-  const [pageBlocks, setPageBlocksState] = useState<Record<string, EditBlock[]>>(() => {
-    const map: Record<string, EditBlock[]> = {}
-    for (const p of pages) map[p.id] = p.blocks
-    return map
-  })
+  const [pageBlocks, setPageBlocksState] = useState<Record<string, EditBlock[]>>(() => blocksMapFromPages(pages))
   const [dirtyPages, setDirtyPages] = useState<Set<string>>(new Set())
   const [isSaving, setIsSaving] = useState(false)
 
@@ -128,10 +138,12 @@ export function CmsEditProvider({ children, pages }: Props) {
 
   const enterEditMode = useCallback(() => {
     // Seed history with current state for each page
+    const map = blocksMapFromPages(pages)
     for (const p of pages) {
-      historyRef.current[p.id] = [p.blocks]
+      historyRef.current[p.id] = [map[p.id]]
       historyIndexRef.current[p.id] = 0
     }
+    setPageBlocksState(map)
     setIsEditMode(true)
   }, [pages])
 
@@ -140,8 +152,7 @@ export function CmsEditProvider({ children, pages }: Props) {
     setDirtyPages(new Set())
     historyRef.current = {}
     historyIndexRef.current = {}
-    const map: Record<string, EditBlock[]> = {}
-    for (const p of pages) map[p.id] = p.blocks
+    const map = blocksMapFromPages(pages)
     setPageBlocksState(map)
   }, [pages])
 
@@ -173,6 +184,9 @@ export function CmsEditProvider({ children, pages }: Props) {
             colSpan: b.colSpan,
             visible: b.visible,
             blockOrder: i + 1,
+            blockKey: b.blockKey ?? null,
+            overlayOf: b.overlayOf ?? null,
+            overlayPosition: b.overlayPosition ?? null,
           })),
         }),
       })

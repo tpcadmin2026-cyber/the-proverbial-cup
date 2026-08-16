@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 const TEMPLATES = [
   { key: 'verify',         label: 'Email verification',       description: 'Sent when a new account is created', editable: true },
+  { key: 'newsletterConfirm', label: 'Newsletter confirmation', description: 'Sent when someone signs up for the newsletter — they must click through before they\'re marked confirmed', editable: true },
   { key: 'reset',          label: 'Password reset',           description: 'Sent when a password reset is requested', editable: true },
   { key: 'invite',         label: 'Team invitation',          description: 'Sent when a staff member is invited', editable: true },
   { key: 'subscription',   label: 'Subscription confirmation', description: 'Sent when a subscription is activated', editable: true },

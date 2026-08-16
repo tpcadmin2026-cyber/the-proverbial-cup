@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 interface Plan {
   name: string
@@ -530,7 +530,12 @@ function DangerTab({ userEmail }: { userEmail: string }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function AccountPortal({ user, subscription, orders, siteName, currency }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const searchParams = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const validTabs: Tab[] = ['overview', 'orders', 'profile', 'password', 'danger']
+  const [activeTab, setActiveTab] = useState<Tab>(
+    validTabs.includes(requestedTab as Tab) ? (requestedTab as Tab) : 'overview'
+  )
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'My Subscription' },

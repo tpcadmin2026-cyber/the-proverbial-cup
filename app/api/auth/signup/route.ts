@@ -26,6 +26,18 @@ export async function POST(req: NextRequest) {
       data: { name, email, passwordHash, role: 'subscriber' },
     })
 
+    // Activate any pending corporate gift addressed to this email
+    const pendingGift = await db.corporateGift.findFirst({ where: { recipientEmail: email, status: 'pending' } })
+    if (pendingGift) {
+      await db.userSubscription.create({
+        data: { userId: user.id, planId: pendingGift.planId, status: 'active', billingInterval: 'monthly' },
+      })
+      await db.corporateGift.update({
+        where: { id: pendingGift.id },
+        data: { status: 'active', activatedAt: new Date() },
+      })
+    }
+
     // Send verification email (logs to terminal in dev)
     const baseUrl = req.nextUrl.origin
     await sendVerificationEmail(email, baseUrl)
