@@ -78,6 +78,35 @@ const STEPS_SIZE_SCALE: Record<string, { icon: number; title: string; text: stri
   large:  { icon: 76, title: '1.05em', text: '0.9em',  titleGap: '5px' },
 }
 
+export const ALIGN_OPTIONS = [
+  { value: 'left',   label: 'Left' },
+  { value: 'center', label: 'Center' },
+  { value: 'right',  label: 'Right' },
+] as const
+
+export const BUTTON_SIZES = [
+  { value: 'small',  label: 'Small' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'large',  label: 'Large' },
+] as const
+
+const BUTTON_SIZE_SCALE: Record<string, { padding: string; fontSize: string }> = {
+  small:  { padding: '5px 14px',  fontSize: '0.68em' },
+  medium: { padding: '8px 20px',  fontSize: '0.8em' },
+  large:  { padding: '12px 30px', fontSize: '0.95em' },
+}
+
+function ctaButtonStyle(style: string, size: string): React.CSSProperties {
+  const s = BUTTON_SIZE_SCALE[size] ?? BUTTON_SIZE_SCALE.medium
+  return {
+    display: 'inline-block', padding: s.padding,
+    backgroundColor: style === 'outline' ? 'transparent' : 'var(--ink)',
+    color: style === 'outline' ? 'var(--ink)' : 'var(--paper)',
+    border: '1px solid var(--ink)', textDecoration: 'none',
+    fontFamily: 'var(--font-headline)', fontSize: s.fontSize, letterSpacing: '0.08em',
+  }
+}
+
 function parseJson<T>(str: string, fallback: T): T {
   try { return JSON.parse(str) as T } catch { return fallback }
 }
@@ -103,8 +132,10 @@ function formatPrice(cents: number, currency: string) {
 export function StaticBlock({ block, products = [], currency = 'USD', currentUser = null }: { block: EditBlock; products?: ProductSummary[]; currency?: string; currentUser?: CurrentUser | null }) {
   const text = block.content ?? ''
   switch (block.blockType as BlockType) {
-    case 'account_widget':
-      return <AccountWidget currentUser={currentUser} />
+    case 'account_widget': {
+      const d = parseJson<{ align?: string }>(text, {})
+      return <AccountWidget currentUser={currentUser} align={d.align ?? 'center'} />
+    }
     case 'headline':
       return <div className="article-headline" style={{ marginBottom: '0.5em' }}>{text}</div>
     case 'subheadline':
@@ -124,19 +155,10 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
         </div>
       )
     case 'cta': {
-      const d = parseJson<{ text: string; url: string; style: string }>(text, { text: 'Subscribe Now', url: '/pricing', style: 'dark' })
+      const d = parseJson<{ text: string; url: string; style: string; size?: string; align?: string }>(text, { text: 'Subscribe Now', url: '/pricing', style: 'dark' })
       return (
-        <div style={{ margin: '0.75em 0', textAlign: 'center' }}>
-          <a
-            href={d.url}
-            style={{
-              display: 'inline-block', padding: '8px 20px',
-              backgroundColor: d.style === 'outline' ? 'transparent' : 'var(--ink)',
-              color: d.style === 'outline' ? 'var(--ink)' : 'var(--paper)',
-              border: '1px solid var(--ink)', textDecoration: 'none',
-              fontFamily: 'var(--font-headline)', fontSize: '0.8em', letterSpacing: '0.08em',
-            }}
-          >
+        <div style={{ margin: '0.75em 0', textAlign: (d.align as React.CSSProperties['textAlign']) ?? 'center' }}>
+          <a href={d.url} style={ctaButtonStyle(d.style, d.size ?? 'medium')}>
             {d.text}
           </a>
         </div>
@@ -252,21 +274,31 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       )
     }
     case 'steps': {
-      const d = parseJson<{ title: string; size?: string; items: { image: string; title: string; text: string; text2?: string }[] }>(text, { title: '', items: [] })
+      const d = parseJson<{ title: string; size?: string; align?: string; items: { image: string; title: string; text: string; text2?: string; buttonText?: string; buttonUrl?: string; buttonSize?: string }[] }>(text, { title: '', items: [] })
       if (!d.title && d.items.length === 0) return null
       const scale = STEPS_SIZE_SCALE[d.size ?? 'medium'] ?? STEPS_SIZE_SCALE.medium
+      const align = d.align ?? 'center'
+      const justify = align === 'left' ? 'start' : align === 'right' ? 'end' : 'center'
       return (
         <div style={{ margin: '1em 0' }}>
           {d.title && (
-            <div className="section-label" style={{ textAlign: 'center', marginBottom: '1em' }}>{d.title}</div>
+            <div style={{ textAlign: align as React.CSSProperties['textAlign'], marginBottom: '1em' }}>
+              <span style={{
+                fontFamily: 'var(--font-headline, "Playfair Display", serif)', fontWeight: 700,
+                fontSize: '1.4em', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--red)',
+                borderBottom: '2px solid var(--red)', paddingBottom: '5px', display: 'inline-block',
+              }}>
+                {d.title}
+              </span>
+            </div>
           )}
           {d.items.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(140px, 1fr))`, gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(140px, 1fr))`, gap: '20px', justifyItems: justify }}>
               {d.items.map((item, i) => (
-                <div key={i} style={{ textAlign: 'center' }}>
+                <div key={i} style={{ textAlign: align as React.CSSProperties['textAlign'] }}>
                   {item.image && (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={item.image} alt={item.title} style={{ width: `${scale.icon}px`, height: `${scale.icon}px`, objectFit: 'contain', margin: '0 auto 10px' }} />
+                    <img src={item.image} alt={item.title} style={{ width: `${scale.icon}px`, height: `${scale.icon}px`, objectFit: 'contain', margin: align === 'left' ? '0 0 10px' : align === 'right' ? '0 0 10px auto' : '0 auto 10px' }} />
                   )}
                   {item.title && (
                     <div style={{ fontFamily: 'var(--font-smallcaps)', fontWeight: 'bold', fontSize: scale.title, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: scale.titleGap }}>
@@ -278,6 +310,11 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
                   )}
                   {item.text2 && (
                     <div className="body-text" style={{ fontSize: scale.text, color: 'var(--ink-faded)', marginTop: '4px' }}>{item.text2}</div>
+                  )}
+                  {item.buttonText && item.buttonUrl && (
+                    <div style={{ marginTop: '10px' }}>
+                      <a href={item.buttonUrl} style={ctaButtonStyle('dark', item.buttonSize ?? 'small')}>{item.buttonText}</a>
+                    </div>
                   )}
                 </div>
               ))}
@@ -340,9 +377,9 @@ function getVideoEmbedUrl(url: string): string | null {
 // with quick links when logged in. currentUser is resolved server-side once
 // per page load and threaded down — no client-side session fetch needed.
 
-function AccountWidget({ currentUser }: { currentUser?: CurrentUser | null }) {
+function AccountWidget({ currentUser, align = 'center' }: { currentUser?: CurrentUser | null; align?: string }) {
   const wrapStyle: React.CSSProperties = {
-    margin: '0.25em 0', textAlign: 'center',
+    margin: '0.25em 0', textAlign: align as React.CSSProperties['textAlign'],
     fontSize: '0.72em', lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
   }
   const linkStyle: React.CSSProperties = {
@@ -796,10 +833,16 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   }
 
   // CTA-specific fields
-  const ctaData = parseJson<{ text: string; url: string; style: string }>(block.blockType === 'cta' ? block.content : '{}', { text: 'Subscribe Now', url: '/pricing', style: 'dark' })
+  const ctaData = parseJson<{ text: string; url: string; style: string; size?: string; align?: string }>(block.blockType === 'cta' ? block.content : '{}', { text: 'Subscribe Now', url: '/pricing', style: 'dark' })
   const [ctaText, setCtaText] = useState(ctaData.text ?? 'Subscribe Now')
   const [ctaUrl, setCtaUrl] = useState(ctaData.url ?? '/pricing')
   const [ctaStyle, setCtaStyle] = useState(ctaData.style ?? 'dark')
+  const [ctaSize, setCtaSize] = useState(ctaData.size ?? 'medium')
+  const [ctaAlign, setCtaAlign] = useState(ctaData.align ?? 'center')
+
+  // Account widget fields
+  const accountData = parseJson<{ align?: string }>(block.blockType === 'account_widget' ? block.content : '{}', {})
+  const [accountAlign, setAccountAlign] = useState(accountData.align ?? 'center')
 
   // Ornament preset
   const [ornament, setOrnament] = useState(block.blockType === 'ornament' ? (block.content || '⸻ ✦ ⸻') : '⸻ ✦ ⸻')
@@ -814,16 +857,18 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   const [blankBordered, setBlankBordered] = useState(blankData.bordered ?? false)
 
   // Steps / Features fields
-  const stepsData = parseJson<{ title: string; size?: string; items: { image: string; title: string; text: string; text2?: string }[] }>(
+  type StepItem = { image: string; title: string; text: string; text2?: string; buttonText?: string; buttonUrl?: string; buttonSize?: string }
+  const stepsData = parseJson<{ title: string; size?: string; align?: string; items: StepItem[] }>(
     block.blockType === 'steps' ? block.content : '{}',
-    { title: '', size: 'medium', items: [{ image: '', title: '', text: '', text2: '' }] }
+    { title: '', size: 'medium', align: 'center', items: [{ image: '', title: '', text: '', text2: '' }] }
   )
   const [stepsTitle, setStepsTitle] = useState(stepsData.title ?? '')
   const [stepsSize, setStepsSize] = useState(stepsData.size ?? 'medium')
-  const [stepsItems, setStepsItems] = useState(stepsData.items?.length > 0 ? stepsData.items : [{ image: '', title: '', text: '', text2: '' }])
+  const [stepsAlign, setStepsAlign] = useState(stepsData.align ?? 'center')
+  const [stepsItems, setStepsItems] = useState<StepItem[]>(stepsData.items?.length > 0 ? stepsData.items : [{ image: '', title: '', text: '', text2: '' }])
   const [stepsUploadingIndex, setStepsUploadingIndex] = useState<number | null>(null)
 
-  function updateStepItem(i: number, patch: Partial<{ image: string; title: string; text: string; text2: string }>) {
+  function updateStepItem(i: number, patch: Partial<StepItem>) {
     setStepsItems((prev) => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it))
   }
   function addStepItem() {
@@ -867,11 +912,12 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   function buildContent(): string {
     switch (type) {
       case 'image': return JSON.stringify({ url: imgUrl, alt: imgAlt, caption: imgCaption, width: imgWidth, fit: imgFit })
-      case 'cta':   return JSON.stringify({ text: ctaText, url: ctaUrl, style: ctaStyle })
+      case 'cta':   return JSON.stringify({ text: ctaText, url: ctaUrl, style: ctaStyle, size: ctaSize, align: ctaAlign })
+      case 'account_widget': return JSON.stringify({ align: accountAlign })
       case 'ornament': return ornament
       case 'spacer': return String(spacerHeight)
       case 'blank': return JSON.stringify({ height: blankHeight, backgroundColor: blankBg, bordered: blankBordered })
-      case 'steps': return JSON.stringify({ title: stepsTitle, size: stepsSize, items: stepsItems.filter((it) => it.image || it.title || it.text || it.text2) })
+      case 'steps': return JSON.stringify({ title: stepsTitle, size: stepsSize, align: stepsAlign, items: stepsItems.filter((it) => it.image || it.title || it.text || it.text2 || it.buttonText) })
       case 'featured_products': return JSON.stringify({ heading: fpHeading, productIds: fpProductIds })
       default: return text
     }
@@ -1160,7 +1206,32 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                   ))}
                 </div>
               </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Button size</FieldLabel>
+                  <select value={ctaSize} onChange={(e) => setCtaSize(e.target.value)} style={selectStyle}>
+                    {BUTTON_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Alignment</FieldLabel>
+                  <select value={ctaAlign} onChange={(e) => setCtaAlign(e.target.value)} style={selectStyle}>
+                    {ALIGN_OPTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+                  </select>
+                </div>
+              </div>
             </>
+          )}
+
+          {/* ── ACCOUNT WIDGET ── */}
+          {type === 'account_widget' && (
+            <div>
+              <FieldLabel>Alignment</FieldLabel>
+              <select value={accountAlign} onChange={(e) => setAccountAlign(e.target.value)} style={{ ...selectStyle, maxWidth: '160px' }}>
+                {ALIGN_OPTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+              </select>
+              <HelpText>Which side of its column the sign-in prompt (or profile links, once signed in) sits on.</HelpText>
+            </div>
           )}
 
           {/* ── ORNAMENT ── */}
@@ -1217,15 +1288,21 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <div style={{ flex: 1 }}>
-                  <FieldLabel>Section title <span style={{ color: '#b8b090', fontWeight: 400 }}>(centered above the points)</span></FieldLabel>
+                  <FieldLabel>Section title</FieldLabel>
                   <input type="text" value={stepsTitle} onChange={(e) => setStepsTitle(e.target.value)} placeholder="How It Works" style={inputStyle} />
                 </div>
-                <div style={{ width: '130px' }}>
+                <div style={{ width: '110px' }}>
                   <FieldLabel>Size</FieldLabel>
                   <select value={stepsSize} onChange={(e) => setStepsSize(e.target.value)} style={selectStyle}>
                     {STEPS_SIZES.map((s) => (
                       <option key={s.value} value={s.value}>{s.label}</option>
                     ))}
+                  </select>
+                </div>
+                <div style={{ width: '110px' }}>
+                  <FieldLabel>Alignment</FieldLabel>
+                  <select value={stepsAlign} onChange={(e) => setStepsAlign(e.target.value)} style={selectStyle}>
+                    {ALIGN_OPTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
                   </select>
                 </div>
               </div>
@@ -1282,6 +1359,22 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                         type="url" value={item.image} onChange={(e) => updateStepItem(i, { image: e.target.value })}
                         placeholder="or paste an image URL" style={{ ...inputStyle, fontSize: 11 }}
                       />
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          type="text" value={item.buttonText ?? ''} onChange={(e) => updateStepItem(i, { buttonText: e.target.value })}
+                          placeholder="Button text (optional)" style={{ ...inputStyle, flex: 1.4 }}
+                        />
+                        <input
+                          type="text" value={item.buttonUrl ?? ''} onChange={(e) => updateStepItem(i, { buttonUrl: e.target.value })}
+                          placeholder="/link" style={{ ...inputStyle, flex: 1 }}
+                        />
+                        <select
+                          value={item.buttonSize ?? 'small'} onChange={(e) => updateStepItem(i, { buttonSize: e.target.value })}
+                          style={{ ...selectStyle, width: 90 }}
+                        >
+                          {BUTTON_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1293,7 +1386,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
               >
                 + Add point
               </button>
-              <HelpText>Add as many points as you like — each gets its own image, title, and up to two lines of description. Use Size to scale the whole row up or down. Works well spanning all columns.</HelpText>
+              <HelpText>Add as many points as you like — each gets its own image, title, up to two lines of description, and an optional button. Use Size to scale the row and Alignment to push everything left, center, or right.</HelpText>
             </div>
           )}
 
