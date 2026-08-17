@@ -7,6 +7,19 @@ import { PERMISSION_DEFINITIONS, ROLE_DEFAULTS } from '../lib/permissions'
 const db = new PrismaClient()
 
 // ── Settings ─────────────────────────────────────────────────────────────────
+
+// Curated to fonts actually loaded via the Google Fonts <link> in app/layout.tsx —
+// picking anything else here would silently do nothing (the browser would just
+// fall back to a default serif/sans-serif).
+const FONT_OPTIONS = JSON.stringify([
+  { label: 'Playfair Display — Elegant Serif', value: 'Playfair Display' },
+  { label: 'Libre Baskerville — Classic Serif', value: 'Libre Baskerville' },
+  { label: 'Anton — Bold Impact', value: 'Anton' },
+  { label: 'Antonio — Condensed', value: 'Antonio' },
+  { label: 'Cinzel — Roman Engraved', value: 'Cinzel' },
+  { label: 'UnifrakturMaguntia — Gothic Blackletter', value: 'UnifrakturMaguntia' },
+])
+
 const DEFAULT_SETTINGS = [
   // Site identity
   { key: 'site.name',          group: 'site', label: 'Site name',          helpText: 'The name of your website, shown in the browser tab and emails.', inputType: 'text',  value: '"My Site"' },
@@ -25,14 +38,18 @@ const DEFAULT_SETTINGS = [
   { key: 'site.social.facebook',  group: 'site', label: 'Facebook URL',     helpText: 'Your Facebook page URL.', inputType: 'url', value: '""' },
 
   // Design
+  // NOTE ON DEFAULTS: these values are deliberately set to match what the site
+  // already looks like today (see app/globals.css) — not the "nicest" values —
+  // so wiring this page up to actually apply these settings is a visual no-op
+  // for every existing install until someone opens this page and changes something.
   { key: 'design.activeTemplate',     group: 'design', label: 'Active template',        helpText: 'Which visual template your site uses.', inputType: 'select', value: '"victorian_gazette"', options: '[{"label":"Victorian Illustrated Gazette","value":"victorian_gazette"}]' },
-  { key: 'design.bgColor',            group: 'design', label: 'Background colour',       helpText: 'The main background colour of your site.', inputType: 'color', value: '"#E8E6D8"' },
-  { key: 'design.paperColor',         group: 'design', label: 'Page / paper colour',     helpText: 'The colour of the newspaper page surface.', inputType: 'color', value: '"transparent"' },
-  { key: 'design.inkColor',           group: 'design', label: 'Ink colour',              helpText: 'The main text colour.', inputType: 'color', value: '"#1a1008"' },
-  { key: 'design.accentColor',        group: 'design', label: 'Accent colour (red)',      helpText: 'Used for section labels, borders, and highlights.', inputType: 'color', value: '"#7a1c1c"' },
-  { key: 'design.goldColor',          group: 'design', label: 'Gold colour',             helpText: 'Used for ornamental details and dingbats.', inputType: 'color', value: '"#8b6914"' },
-  { key: 'design.linkColor',          group: 'design', label: 'Link colour',             helpText: 'Colour of clickable links.', inputType: 'color', value: '"#7a1c1c"' },
-  { key: 'design.tabWidth',           group: 'design', label: 'Tab width (px)',           helpText: 'Width of the side navigation tabs in pixels.', inputType: 'number', value: '44' },
+  { key: 'design.bgColor',            group: 'design', label: 'Background colour',       helpText: 'The main background colour of your site, behind the paper texture.', inputType: 'color', value: '"#E8E6D8"' },
+  { key: 'design.paperColor',         group: 'design', label: 'Page / paper colour',     helpText: 'The colour of the newspaper page surface itself. Leave transparent to let the background texture show through.', inputType: 'color', value: '"transparent"' },
+  { key: 'design.inkColor',           group: 'design', label: 'Ink colour',              helpText: 'The main text colour.', inputType: 'color', value: '"#35291C"' },
+  { key: 'design.accentColor',        group: 'design', label: 'Accent colour (red)',      helpText: 'Used for section labels, borders, and highlights.', inputType: 'color', value: '"#7A564C"' },
+  { key: 'design.goldColor',          group: 'design', label: 'Gold colour',             helpText: 'Used for ornamental details and dingbats.', inputType: 'color', value: '"#C4AB77"' },
+  { key: 'design.linkColor',          group: 'design', label: 'Link colour',             helpText: 'Colour of clickable links.', inputType: 'color', value: '"#7A564C"' },
+  { key: 'design.tabWidth',           group: 'design', label: 'Tab width (px)',           helpText: 'Minimum width of the side navigation tabs in pixels.', inputType: 'number', value: '40' },
   { key: 'design.slideMs',            group: 'design', label: 'Page transition speed (ms)', helpText: 'How fast pages slide when you navigate. 500ms is the default.', inputType: 'number', value: '500' },
   { key: 'design.mastheadTitle',      group: 'masthead', label: 'Masthead title',          helpText: 'The large decorative title displayed at the top of the newspaper — the big gothic text.', inputType: 'text', value: '"My Site"' },
   { key: 'design.grain.enabled',      group: 'design', label: 'Paper grain texture',      helpText: 'Enables the paper texture effect on the background.', inputType: 'toggle', value: 'true' },
@@ -40,11 +57,11 @@ const DEFAULT_SETTINGS = [
   { key: 'design.grain.numOctaves',   group: 'design', label: 'Grain octaves',            helpText: 'Controls the complexity of the paper grain. Default: 4.', inputType: 'number', value: '4' },
   { key: 'design.grain.slope',        group: 'design', label: 'Grain intensity',          helpText: 'How strong the grain effect is. Default: 3.2.', inputType: 'number', value: '3.2' },
   { key: 'design.grain.opacity',      group: 'design', label: 'Grain opacity',            helpText: 'How visible the grain is, from 0 (invisible) to 1 (full). Default: 0.72.', inputType: 'number', value: '0.72' },
-  { key: 'design.scrollbarThumb',     group: 'design', label: 'Scrollbar colour',         helpText: 'Colour of the scrollbar thumb.', inputType: 'color', value: '"#a89060"' },
-  { key: 'design.font.masthead',      group: 'design', label: 'Masthead font',            helpText: 'Font used for the large title at the top.', inputType: 'text', value: '"UnifrakturMaguntia"' },
-  { key: 'design.font.headline',      group: 'design', label: 'Headline font',            helpText: 'Font used for article headlines.', inputType: 'text', value: '"Cinzel"' },
-  { key: 'design.font.body',          group: 'design', label: 'Body text font',           helpText: 'Font used for article body text.', inputType: 'text', value: '"IM Fell English"' },
-  { key: 'design.font.smallCaps',     group: 'design', label: 'Small caps / labels font', helpText: 'Font used for section labels and small caps text.', inputType: 'text', value: '"IM Fell English SC"' },
+  { key: 'design.scrollbarThumb',     group: 'design', label: 'Scrollbar colour',         helpText: 'Colour of the scrollbar thumb.', inputType: 'color', value: '"#C4AB77"' },
+  { key: 'design.font.masthead',      group: 'design', label: 'Masthead font (legacy — unused)', helpText: 'This field no longer does anything — the masthead title font is now controlled from Settings → Masthead → Title font, which actually applies it. Kept here only so nothing breaks for anyone who had it set.', inputType: 'text', value: '"UnifrakturMaguntia"' },
+  { key: 'design.font.headline',      group: 'design', label: 'Headline font',            helpText: 'Font used for headline and subheadline blocks.', inputType: 'select', value: '"Playfair Display"', options: FONT_OPTIONS },
+  { key: 'design.font.body',          group: 'design', label: 'Body text font',           helpText: 'Font used for article body text sitewide.', inputType: 'select', value: '"Libre Baskerville"', options: FONT_OPTIONS },
+  { key: 'design.font.smallCaps',     group: 'design', label: 'Small caps / labels font', helpText: 'Font used for section labels and small caps text.', inputType: 'select', value: '"Playfair Display"', options: FONT_OPTIONS },
 
   // Masthead / edition
   { key: 'masthead.taglineLeft',    group: 'masthead', label: 'Tagline — left text',    helpText: 'Text on the left of the tagline row (e.g. "Price Two Pence").', inputType: 'text', value: '"PRICE TWO PENCE"' },
@@ -56,6 +73,15 @@ const DEFAULT_SETTINGS = [
   { key: 'masthead.issueNumber',    group: 'masthead', label: 'Issue number',            helpText: 'Issue number shown in the edition bar.', inputType: 'text', value: '"841"' },
   { key: 'masthead.editionLabel',   group: 'masthead', label: 'Edition label',           helpText: 'Edition label (e.g. "London Morning Edition").', inputType: 'text', value: '"LONDON MORNING EDITION"' },
   { key: 'masthead.establishedBy',  group: 'masthead', label: 'Established text',        helpText: 'Text shown on the right of the edition bar.', inputType: 'text', value: '"Established by Royal Charter"' },
+
+  // Masthead — advanced (title styling + section visibility)
+  { key: 'masthead.titleFont',      group: 'masthead', label: 'Title font',              helpText: 'Font for the big title — only affects the text title, not an uploaded logo image.', inputType: 'select', value: '"Anton"', options: '[{"label":"Anton — Bold Impact","value":"Anton"},{"label":"Playfair Display — Elegant Serif","value":"Playfair Display"},{"label":"Antonio — Condensed","value":"Antonio"},{"label":"UnifrakturMaguntia — Gothic Blackletter","value":"UnifrakturMaguntia"},{"label":"Cinzel — Roman Engraved","value":"Cinzel"}]' },
+  { key: 'masthead.titleSize',      group: 'masthead', label: 'Title size',              helpText: 'How large the title text renders.', inputType: 'select', value: '"medium"', options: '[{"label":"Small","value":"small"},{"label":"Medium (default)","value":"medium"},{"label":"Large","value":"large"},{"label":"Extra large","value":"xlarge"}]' },
+  { key: 'masthead.titleColor',     group: 'masthead', label: 'Title colour',            helpText: 'Colour of the title text.', inputType: 'color', value: '"#35291C"' },
+  { key: 'masthead.logoHeight',     group: 'masthead', label: 'Logo size',               helpText: 'Only used when a masthead logo image is set (above). Small/Large also affect a text title.', inputType: 'select', value: '"medium"', options: '[{"label":"Small","value":"small"},{"label":"Medium (default)","value":"medium"},{"label":"Large","value":"large"}]' },
+  { key: 'masthead.showTaglineRow', group: 'masthead', label: 'Show tagline row',        helpText: 'The decorative line above the title (e.g. "Price Two Pence … For King & Country").', inputType: 'toggle', value: 'true' },
+  { key: 'masthead.showMottoRow',   group: 'masthead', label: 'Show motto row',          helpText: 'The line below the title with your motto and the edition date.', inputType: 'toggle', value: 'true' },
+  { key: 'masthead.showEditionBar', group: 'masthead', label: 'Show edition bar',        helpText: 'The volume / issue number / edition label line.', inputType: 'toggle', value: 'true' },
 
   // Email / notifications
   { key: 'email.provider',    group: 'email', label: 'Email provider',       helpText: 'Which service sends your emails.', inputType: 'select', value: '"resend"', options: '[{"label":"Resend","value":"resend"},{"label":"Mailgun","value":"mailgun"},{"label":"SendGrid","value":"sendgrid"},{"label":"SMTP","value":"smtp"}]' },

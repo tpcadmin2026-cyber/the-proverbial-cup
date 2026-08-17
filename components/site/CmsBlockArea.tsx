@@ -280,7 +280,7 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       const d = parseTextContent(text)
       return (
         <div style={{
-          fontFamily: "'Playfair Display', serif", fontWeight: 900,
+          fontFamily: 'var(--font-headline)', fontWeight: 900,
           fontSize: 'clamp(.72rem, 1.3vw, 1.05rem)', lineHeight: 1.15,
           color: 'var(--ink)', marginBottom: '0.5em',
           ...textStyleOverrides('headline', d.size, d.align),
@@ -291,7 +291,7 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       const d = parseTextContent(text)
       return (
         <div style={{
-          fontFamily: "'Playfair Display', serif", fontWeight: 700, fontStyle: 'italic',
+          fontFamily: 'var(--font-headline)', fontWeight: 700, fontStyle: 'italic',
           fontSize: '85%', marginBottom: '0.4em', color: 'var(--ink)',
           ...textStyleOverrides('subheadline', d.size, d.align),
         }}>{d.text}</div>
@@ -1889,13 +1889,36 @@ function VisualSortableBlock({ block, allBlocks, products, currency, onEdit, onD
         opacity: isDragging ? 0 : block.visible ? 1 : 0.35,
         position: 'relative',
         height: isFillImage ? '100%' : undefined,
-        marginBottom: '2px',
+        marginBottom: '9px',
         borderRadius: '2px',
         paddingTop: (block.colSpan ?? 1) > 1 ? '20px' : undefined,
         outline: hovered && !isDragging ? '2px solid rgba(139,105,20,0.5)' : '2px solid transparent',
         outlineOffset: '1px',
       }}
     >
+      {/* Drag handle — a tall, always-present grip on the left edge (much easier to
+          grab and aim than a tiny corner icon). Brightens on hover; the whole strip
+          is the drag surface, not just the icon glyph. */}
+      <div
+        {...attributes} {...listeners}
+        title="Drag to move"
+        style={{
+          position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 18,
+          width: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none',
+          backgroundColor: hovered && !isDragging ? 'rgba(26,16,8,0.55)' : 'transparent',
+          borderRadius: '2px 0 0 2px',
+          opacity: hovered && !isDragging ? 1 : 0.22,
+          transition: 'opacity 0.12s, background-color 0.12s',
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill={hovered ? '#E8E6D8' : '#7A564C'}>
+          <circle cx="9" cy="5" r="1.8"/><circle cx="15" cy="5" r="1.8"/>
+          <circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/>
+          <circle cx="9" cy="19" r="1.8"/><circle cx="15" cy="19" r="1.8"/>
+        </svg>
+      </div>
+
       {/* Spans indicator */}
       {(block.colSpan ?? 1) > 1 && (
         <div style={{
@@ -1938,19 +1961,6 @@ function VisualSortableBlock({ block, allBlocks, products, currency, onEdit, onD
           <span style={{ fontFamily: 'Inter, sans-serif', fontSize: '9px', color: '#C4AB77', marginRight: '4px', whiteSpace: 'nowrap' }}>
             {typeDef?.icon} {typeDef?.label}
           </span>
-
-          {/* Drag handle */}
-          <button
-            {...attributes} {...listeners}
-            title="Drag to move"
-            style={{ cursor: 'grab', background: 'none', border: 'none', padding: '3px', color: '#C4AB77', display: 'flex', touchAction: 'none' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="9" cy="5" r="1.8"/><circle cx="15" cy="5" r="1.8"/>
-              <circle cx="9" cy="12" r="1.8"/><circle cx="15" cy="12" r="1.8"/>
-              <circle cx="9" cy="19" r="1.8"/><circle cx="15" cy="19" r="1.8"/>
-            </svg>
-          </button>
 
           <ToolbarBtn title="Edit content" onClick={() => onEdit(block)} color="#E8E6D8">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2011,6 +2021,36 @@ export function EditablePanel({ pageId, columnCount, layout, products, currency 
     return blocks.filter((b) => b.column === col)
   }
 
+  // Computes the block order that results from moving `activeBlockId` to wherever
+  // `overRawId` points (either another block's id, to be inserted next to, or a
+  // `drop-col-N-row` empty-segment id, appended to the end of that column).
+  function moveBlock(overRawId: string, activeBlockId: string): EditBlock[] | null {
+    const activeIdx = blocks.findIndex((b) => b.id === activeBlockId)
+    if (activeIdx === -1) return null
+    const activeBlock = blocks[activeIdx]
+
+    const colMatch = overRawId.match(/^drop-col-(\d+)-\d+$/)
+    if (colMatch) {
+      const targetCol = parseInt(colMatch[1])
+      const without = blocks.filter((_, i) => i !== activeIdx)
+      let insertAt = without.length
+      for (let i = without.length - 1; i >= 0; i--) {
+        if (without[i].column === targetCol) { insertAt = i + 1; break }
+      }
+      return [...without.slice(0, insertAt), { ...activeBlock, column: targetCol }, ...without.slice(insertAt)]
+    }
+
+    const overIdx = blocks.findIndex((b) => b.id === overRawId)
+    if (overIdx === -1 || overIdx === activeIdx) return null
+    const overBlock = blocks[overIdx]
+
+    const withUpdatedColumn = activeBlock.column === overBlock.column
+      ? blocks
+      : blocks.map((b, i) => (i === activeIdx ? { ...b, column: overBlock.column } : b))
+
+    return arrayMove(withUpdatedColumn, activeIdx, overIdx)
+  }
+
   function handleDragStart({ active }: DragStartEvent) {
     setActiveId(active.id as string)
   }
@@ -2024,37 +2064,8 @@ export function EditablePanel({ pageId, columnCount, layout, products, currency 
     setActiveId(null)
     setOverId(null)
     if (!over) return
-
-    const activeIdx = blocks.findIndex((b) => b.id === active.id)
-    if (activeIdx === -1) return
-    const activeBlock = blocks[activeIdx]
-
-    const overRawId = over.id as string
-    const colMatch = overRawId.match(/^drop-col-(\d+)-\d+$/)
-
-    if (colMatch) {
-      // Dropped on an empty segment/column, not on another block — move to the end
-      // of that column's blocks (or the end of the page if the column has none yet).
-      const targetCol = parseInt(colMatch[1])
-      const without = blocks.filter((_, i) => i !== activeIdx)
-      let insertAt = without.length
-      for (let i = without.length - 1; i >= 0; i--) {
-        if (without[i].column === targetCol) { insertAt = i + 1; break }
-      }
-      const next = [...without.slice(0, insertAt), { ...activeBlock, column: targetCol }, ...without.slice(insertAt)]
-      ctx.setPageBlocks(pageId, next)
-      return
-    }
-
-    const overIdx = blocks.findIndex((b) => b.id === overRawId)
-    if (overIdx === -1 || overIdx === activeIdx) return
-    const overBlock = blocks[overIdx]
-
-    const withUpdatedColumn = activeBlock.column === overBlock.column
-      ? blocks
-      : blocks.map((b, i) => (i === activeIdx ? { ...b, column: overBlock.column } : b))
-
-    ctx.setPageBlocks(pageId, arrayMove(withUpdatedColumn, activeIdx, overIdx))
+    const next = moveBlock(over.id as string, active.id as string)
+    if (next) ctx.setPageBlocks(pageId, next)
   }
 
   const handleEditSave = useCallback((updated: EditBlock) => {

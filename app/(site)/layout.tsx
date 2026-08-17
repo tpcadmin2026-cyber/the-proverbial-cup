@@ -8,6 +8,7 @@ import { CartProvider } from '@/components/site/CartContext'
 import { FooterWrapper } from '@/components/site/FooterWrapper'
 import { ChatWidget } from '@/components/site/ChatWidget'
 import { PostHogProvider } from '@/components/site/PostHogProvider'
+import { DesignVars } from '@/components/site/DesignVars'
 
 export async function generateMetadata(): Promise<Metadata> {
   const [name, tagline, faviconUrl] = await Promise.all([
@@ -67,6 +68,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
 
   return (
     <PostHogProvider apiKey={analyticsEnabled ? phKey : ''} host={phHost}>
+      <DesignVars />
       <CartProvider>
         <div className={`site-root${isNewspaper ? ' newspaper-layout' : ''}`}>
           {children}

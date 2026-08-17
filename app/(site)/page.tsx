@@ -96,6 +96,8 @@ export default async function SitePage() {
     siteName, mastheadTitle, mastheadLogoUrl,
     taglineLeft, taglineCenter, taglineRight,
     motto, editionDate, volume, issueNumber, editionLabel, establishedBy,
+    titleFont, titleSize, titleColor, logoHeight,
+    showTaglineRow, showMottoRow, showEditionBar,
     currency,
   ] = await Promise.all([
     getSetting<string>('site.name',              'The Victorian Illustrated Gazette'),
@@ -110,6 +112,13 @@ export default async function SitePage() {
     getSetting<string>('masthead.issueNumber',   '841'),
     getSetting<string>('masthead.editionLabel',  'LONDON MORNING EDITION'),
     getSetting<string>('masthead.establishedBy', 'Established by Royal Charter'),
+    getSetting<string>('masthead.titleFont',     'Anton'),
+    getSetting<string>('masthead.titleSize',     'medium'),
+    getSetting<string>('masthead.titleColor',    '#35291C'),
+    getSetting<string>('masthead.logoHeight',    'medium'),
+    getSetting<boolean>('masthead.showTaglineRow', true),
+    getSetting<boolean>('masthead.showMottoRow',   true),
+    getSetting<boolean>('masthead.showEditionBar', true),
     getSetting<string>('payments.currency',      'USD'),
   ])
 
@@ -120,7 +129,10 @@ export default async function SitePage() {
       siteName={siteName}
       mastheadTitle={mastheadTitle}
       mastheadLogoUrl={mastheadLogoUrl}
-      masthead={{ taglineLeft, taglineCenter, taglineRight, motto, editionDate, volume, issueNumber, editionLabel, establishedBy }}
+      masthead={{
+        taglineLeft, taglineCenter, taglineRight, motto, editionDate, volume, issueNumber, editionLabel, establishedBy,
+        titleFont, titleSize, titleColor, logoHeight, showTaglineRow, showMottoRow, showEditionBar,
+      }}
       products={products}
       currency={currency}
       currentUser={currentUser}

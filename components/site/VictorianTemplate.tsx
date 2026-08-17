@@ -15,6 +15,13 @@ interface Masthead {
   issueNumber: string
   editionLabel: string
   establishedBy: string
+  titleFont: string
+  titleSize: string
+  titleColor: string
+  logoHeight: string
+  showTaglineRow: boolean
+  showMottoRow: boolean
+  showEditionBar: boolean
 }
 
 const DEFAULT_MASTHEAD: Masthead = {
@@ -27,6 +34,34 @@ const DEFAULT_MASTHEAD: Masthead = {
   issueNumber:   '841',
   editionLabel:  'LONDON MORNING EDITION',
   establishedBy: 'Established by Royal Charter',
+  titleFont:     'Anton',
+  titleSize:     'medium',
+  titleColor:    '#35291C',
+  logoHeight:    'medium',
+  showTaglineRow: true,
+  showMottoRow:   true,
+  showEditionBar: true,
+}
+
+const TITLE_FONT_STACK: Record<string, string> = {
+  Anton: "'Anton', sans-serif",
+  'Playfair Display': "'Playfair Display', serif",
+  Antonio: "'Antonio', sans-serif",
+  UnifrakturMaguntia: "'UnifrakturMaguntia', cursive",
+  Cinzel: "'Cinzel', serif",
+}
+
+const TITLE_SIZE_CLAMP: Record<string, string> = {
+  small:  'clamp(1.1rem, 2.6vw, 2.4rem)',
+  medium: 'clamp(1.6rem, 3.5vw, 3.4rem)',
+  large:  'clamp(2.1rem, 4.6vw, 4.4rem)',
+  xlarge: 'clamp(2.6rem, 5.8vw, 5.6rem)',
+}
+
+const LOGO_HEIGHT_CLAMP: Record<string, string> = {
+  small:  'clamp(1.6rem, 3.6vw, 3rem)',
+  medium: 'clamp(2.2rem, 5vw, 4.2rem)',
+  large:  'clamp(2.8rem, 6.4vw, 5.4rem)',
 }
 
 interface Props {
@@ -74,27 +109,47 @@ export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, ma
           </div>
         )}
         <div className="page-masthead">
-          <div className="tagline-row">
-            <span>{m.taglineLeft}</span>
-            <span className="dingbat">{m.taglineCenter}</span>
-            <span>{m.taglineRight}</span>
-          </div>
+          {m.showTaglineRow && (
+            <div className="tagline-row">
+              <span>{m.taglineLeft}</span>
+              <span className="dingbat">{m.taglineCenter}</span>
+              <span>{m.taglineRight}</span>
+            </div>
+          )}
           {mastheadLogoUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={mastheadLogoUrl} alt={mastheadTitle} className="gazette-logo" />
+            <img
+              src={mastheadLogoUrl}
+              alt={mastheadTitle}
+              className="gazette-logo"
+              style={{ height: LOGO_HEIGHT_CLAMP[m.logoHeight] ?? LOGO_HEIGHT_CLAMP.medium }}
+            />
           ) : (
-            <div className="gazette-name">{mastheadTitle}</div>
+            <div
+              className="gazette-name"
+              style={{
+                fontFamily: TITLE_FONT_STACK[m.titleFont] ?? TITLE_FONT_STACK.Anton,
+                fontSize: TITLE_SIZE_CLAMP[m.titleSize] ?? TITLE_SIZE_CLAMP.medium,
+                color: m.titleColor || 'var(--ink)',
+              }}
+            >
+              {mastheadTitle}
+            </div>
           )}
-          <div className="tagline-row">
-            <span style={{ fontStyle: 'italic' }}>{m.motto}</span>
-            <span />
-            <span style={{ fontStyle: 'italic' }}>{m.editionDate}</span>
-          </div>
-          <div className="edition-bar">
-            <span>Vol. {m.volume} — No. {m.issueNumber}</span>
-            <span>{m.editionLabel}</span>
-            <span>{m.establishedBy}</span>
-          </div>
+          {m.showMottoRow && (
+            <div className="tagline-row">
+              <span style={{ fontStyle: 'italic' }}>{m.motto}</span>
+              <span />
+              <span style={{ fontStyle: 'italic' }}>{m.editionDate}</span>
+            </div>
+          )}
+          {m.showEditionBar && (
+            <div className="edition-bar">
+              <span>Vol. {m.volume} — No. {m.issueNumber}</span>
+              <span>{m.editionLabel}</span>
+              <span>{m.establishedBy}</span>
+            </div>
+          )}
         </div>
 
         <div className="rule-triple" />
