@@ -38,6 +38,7 @@ export const BLOCK_TYPES = [
   { value: 'account_widget',    group: 'Commerce', label: 'Account',           description: 'Sign in/sign up prompt for guests, or a profile summary with quick links for logged-in visitors', icon: '◈' },
   // Layout
   { value: 'steps',        group: 'Layout',     label: 'Steps / Features',description: 'A centered title with repeatable image + title + text points — for "How it works" or "Choose your plan" style sections', icon: '⚏' },
+  { value: 'social_links', group: 'Layout',     label: 'Social links',    description: 'Row of clickable icon links to your social media profiles', icon: '🔗' },
   { value: 'section_label',group: 'Layout',     label: 'Section label',   description: 'Bold section heading with decorative rule', icon: '§' },
   { value: 'rule',         group: 'Layout',     label: 'Rule / divider',  description: 'Ornamental horizontal dividing rule', icon: '—' },
   { value: 'ornament',     group: 'Layout',     label: 'Ornament',        description: 'Decorative Victorian symbol or dingbat', icon: '❧' },
@@ -111,6 +112,137 @@ function parseJson<T>(str: string, fallback: T): T {
   try { return JSON.parse(str) as T } catch { return fallback }
 }
 
+// ─── Text block sizing / alignment ───────────────────────────────────────────
+// Headline, subheadline, byline, dateline, body, pull quote, advertisement, and
+// section label all share the same size/align mechanism. Content is stored as
+// JSON ({ text, align, size }) going forward, but parseTextContent falls back
+// to treating the raw string as plain legacy text when it isn't valid JSON —
+// so existing unedited blocks keep rendering exactly as they did before.
+
+const TEXT_STYLED_TYPES = ['headline', 'subheadline', 'byline', 'dateline', 'section_label', 'advertisement', 'pullquote', 'body']
+
+export const TEXT_SIZES = [
+  { value: '',       label: 'Default' },
+  { value: 'small',  label: 'Small' },
+  { value: 'large',  label: 'Large' },
+  { value: 'xlarge', label: 'X-Large' },
+] as const
+
+export const TEXT_ALIGN_OPTIONS = [
+  { value: '',       label: 'Default' },
+  { value: 'left',   label: 'Left' },
+  { value: 'center', label: 'Center' },
+  { value: 'right',  label: 'Right' },
+] as const
+
+const TEXT_SIZE_PX: Record<string, Record<string, string>> = {
+  headline:      { small: '0.85rem', large: '1.5rem',  xlarge: '2rem' },
+  subheadline:   { small: '0.68rem', large: '1.05rem', xlarge: '1.35rem' },
+  byline:        { small: '0.65rem', large: '1rem',    xlarge: '1.25rem' },
+  dateline:      { small: '0.62rem', large: '0.95rem', xlarge: '1.2rem' },
+  body:          { small: '0.5rem',  large: '0.9rem',  xlarge: '1.15rem' },
+  pullquote:     { small: '0.68rem', large: '1.15rem', xlarge: '1.5rem' },
+  advertisement: { small: '0.65rem', large: '1rem',    xlarge: '1.3rem' },
+  section_label: { small: '0.46rem', large: '0.85rem', xlarge: '1.1rem' },
+}
+
+function textStyleOverrides(kind: string, size: string, align: string): React.CSSProperties {
+  const style: React.CSSProperties = {}
+  if (align) style.textAlign = align as React.CSSProperties['textAlign']
+  if (size && TEXT_SIZE_PX[kind]?.[size]) style.fontSize = TEXT_SIZE_PX[kind][size]
+  return style
+}
+
+function parseTextContent(raw: string): { text: string; align: string; size: string } {
+  if (raw) {
+    try {
+      const obj = JSON.parse(raw)
+      if (obj && typeof obj === 'object' && typeof obj.text === 'string') {
+        return { text: obj.text, align: obj.align ?? '', size: obj.size ?? '' }
+      }
+    } catch { /* legacy plain-string content — fall through */ }
+  }
+  return { text: raw ?? '', align: '', size: '' }
+}
+
+// ─── Social links widget ─────────────────────────────────────────────────────
+
+export const SOCIAL_PLATFORMS = [
+  { key: 'twitter',   label: 'X / Twitter' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'facebook',  label: 'Facebook' },
+  { key: 'youtube',   label: 'YouTube' },
+  { key: 'tiktok',    label: 'TikTok' },
+  { key: 'pinterest', label: 'Pinterest' },
+  { key: 'linkedin',  label: 'LinkedIn' },
+] as const
+
+const SOCIAL_SIZE_SCALE: Record<string, { box: string; icon: string }> = {
+  small:  { box: '26px', icon: '13px' },
+  medium: { box: '34px', icon: '17px' },
+  large:  { box: '44px', icon: '22px' },
+}
+
+const SOCIAL_ICON_PATHS: Record<string, React.ReactNode> = {
+  twitter: <path d="M4 4l16 16M20 4L4 20" />,
+  instagram: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4.2" />
+      <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  facebook: <path d="M14 9h3V5.5h-3c-2.2 0-4 1.8-4 4V11H7v3.5h3V21h3.5v-6.5H16l.6-3.5h-3.1V9.6c0-.4.3-.6.6-.6z" fill="currentColor" stroke="none" />,
+  youtube: (
+    <>
+      <rect x="2.5" y="6" width="19" height="12" rx="3" />
+      <path d="M10.5 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  tiktok: <path d="M14 3v10.2a2.6 2.6 0 1 1-2-2.53V8.6a5 5 0 1 0 4.5 4.97V9.8a6 6 0 0 0 3.5 1.1V8.4a3.6 3.6 0 0 1-2.5-1V3z" fill="currentColor" stroke="none" />,
+  pinterest: <path d="M12 2a10 10 0 0 0-3.6 19.3c0-.8 0-1.8.2-2.6l1.4-6s-.3-.7-.3-1.7c0-1.6.9-2.8 2.1-2.8 1 0 1.5.8 1.5 1.7 0 1-.7 2.6-1 4-.3 1.2.6 2.1 1.8 2.1 2.1 0 3.7-2.2 3.7-5.4 0-2.8-2-4.8-4.9-4.8-3.3 0-5.3 2.5-5.3 5.1 0 1 .4 2.1.9 2.6.1.1.1.2.1.3l-.3 1.4c0 .2-.2.3-.4.2-1.4-.6-2.3-2.6-2.3-4.2 0-3.4 2.5-6.6 7.2-6.6 3.8 0 6.7 2.7 6.7 6.3 0 3.8-2.4 6.8-5.7 6.8-1.1 0-2.2-.6-2.5-1.3l-.7 2.6c-.3 1-1 2.3-1.5 3.1A10 10 0 1 0 12 2z" fill="currentColor" stroke="none" />,
+  linkedin: <path d="M6.94 8.5H3.56V20h3.38V8.5zM5.25 3a1.96 1.96 0 1 0 0 3.92A1.96 1.96 0 0 0 5.25 3zM20.45 20h-3.37v-5.6c0-1.34-.02-3.06-1.87-3.06-1.87 0-2.16 1.46-2.16 2.96V20H9.68V8.5h3.24v1.57h.05c.45-.85 1.55-1.75 3.2-1.75 3.42 0 4.05 2.25 4.05 5.18V20z" fill="currentColor" stroke="none" />,
+}
+
+function SocialIcon({ platform, size }: { platform: string; size: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {SOCIAL_ICON_PATHS[platform]}
+    </svg>
+  )
+}
+
+function SocialLinksWidget({ data }: { data: { align?: string; size?: string; style?: string; links?: Record<string, string> } }) {
+  const align = data.align || 'center'
+  const scale = SOCIAL_SIZE_SCALE[data.size ?? 'medium'] ?? SOCIAL_SIZE_SCALE.medium
+  const outline = (data.style ?? 'outline') === 'outline'
+  const entries = SOCIAL_PLATFORMS.filter((p) => data.links?.[p.key])
+  if (entries.length === 0) return null
+  const justify = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center'
+  return (
+    <div style={{ display: 'flex', justifyContent: justify, gap: '10px', margin: '0.5em 0' }}>
+      {entries.map((p) => (
+        <a
+          key={p.key}
+          href={data.links![p.key]}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={p.label}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: scale.box, height: scale.box, borderRadius: '50%', flexShrink: 0,
+            border: outline ? '1.5px solid var(--ink)' : 'none',
+            backgroundColor: outline ? 'transparent' : 'var(--ink)',
+            color: outline ? 'var(--ink)' : 'var(--paper)',
+          }}
+        >
+          <SocialIcon platform={p.key} size={scale.icon} />
+        </a>
+      ))}
+    </div>
+  )
+}
+
 /** Short human label for a block, used in the "overlay on" target picker. */
 function blockLabel(b: EditBlock): string {
   const typeDef = BLOCK_TYPES.find((t) => t.value === b.blockType)
@@ -119,7 +251,15 @@ function blockLabel(b: EditBlock): string {
     const d = parseJson<{ alt?: string }>(b.content, {})
     return d.alt ? `${name} — "${d.alt}"` : name
   }
-  const snippet = (b.content ?? '').replace(/<[^>]+>/g, '').trim().slice(0, 30)
+  let raw = b.content ?? ''
+  try {
+    const obj = JSON.parse(raw)
+    if (obj && typeof obj === 'object') {
+      if (typeof obj.text === 'string') raw = obj.text
+      else if (typeof obj.title === 'string') raw = obj.title
+    }
+  } catch { /* plain string content */ }
+  const snippet = raw.replace(/<[^>]+>/g, '').trim().slice(0, 30)
   return snippet ? `${name} — "${snippet}${snippet.length === 30 ? '…' : ''}"` : name
 }
 
@@ -136,24 +276,80 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       const d = parseJson<{ align?: string }>(text, {})
       return <AccountWidget currentUser={currentUser} align={d.align ?? 'center'} />
     }
-    case 'headline':
-      return <div className="article-headline" style={{ marginBottom: '0.5em' }}>{text}</div>
-    case 'subheadline':
-      return <div className="article-headline" style={{ marginBottom: '0.4em', fontSize: '85%', fontStyle: 'italic' }}>{text}</div>
-    case 'byline':
-      return <div className="body-text" style={{ marginBottom: '0.4em', fontStyle: 'italic', fontSize: '0.85em', color: 'var(--ink-faded)' }}>{text}</div>
-    case 'dateline':
-      return <div className="body-text" style={{ marginBottom: '0.4em', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.8em', fontWeight: 'bold' }}>{text}</div>
-    case 'body':
-      return <RichText as="div" className="body-text" style={{ marginBottom: '0.75em' }} content={text} />
-    case 'pullquote':
-      return <RichText as="blockquote" className="pull-quote" style={{ margin: '0.75em 0' }} content={text} />
-    case 'advertisement':
+    case 'headline': {
+      const d = parseTextContent(text)
       return (
-        <div className="ad-block" style={{ margin: '0.75em 0', textAlign: 'center', border: '1px solid var(--ink-faded)', padding: '8px', fontStyle: 'italic' }}>
-          {text}
+        <div style={{
+          fontFamily: "'Playfair Display', serif", fontWeight: 900,
+          fontSize: 'clamp(.72rem, 1.3vw, 1.05rem)', lineHeight: 1.15,
+          color: 'var(--ink)', marginBottom: '0.5em',
+          ...textStyleOverrides('headline', d.size, d.align),
+        }}>{d.text}</div>
+      )
+    }
+    case 'subheadline': {
+      const d = parseTextContent(text)
+      return (
+        <div style={{
+          fontFamily: "'Playfair Display', serif", fontWeight: 700, fontStyle: 'italic',
+          fontSize: '85%', marginBottom: '0.4em', color: 'var(--ink)',
+          ...textStyleOverrides('subheadline', d.size, d.align),
+        }}>{d.text}</div>
+      )
+    }
+    case 'byline': {
+      const d = parseTextContent(text)
+      return (
+        <div className="body-text" style={{
+          marginBottom: '0.4em', fontStyle: 'italic', fontSize: '0.85em', color: 'var(--ink-faded)',
+          ...textStyleOverrides('byline', d.size, d.align),
+        }}>{d.text}</div>
+      )
+    }
+    case 'dateline': {
+      const d = parseTextContent(text)
+      return (
+        <div className="body-text" style={{
+          marginBottom: '0.4em', textTransform: 'uppercase', letterSpacing: '0.05em',
+          fontSize: '0.8em', fontWeight: 'bold',
+          ...textStyleOverrides('dateline', d.size, d.align),
+        }}>{d.text}</div>
+      )
+    }
+    case 'body': {
+      const d = parseTextContent(text)
+      return <RichText as="div" className="body-text" style={{ marginBottom: '0.75em', ...textStyleOverrides('body', d.size, d.align) }} content={d.text} />
+    }
+    case 'pullquote': {
+      const d = parseTextContent(text)
+      return (
+        <RichText
+          as="blockquote"
+          style={{
+            margin: '0.75em 0', borderLeft: '3px solid var(--red)', paddingLeft: '14px',
+            fontStyle: 'italic', fontSize: 'clamp(.68rem, 1.05vw, .88rem)', color: 'var(--ink-faded)',
+            ...textStyleOverrides('pullquote', d.size, d.align),
+          }}
+          content={d.text}
+        />
+      )
+    }
+    case 'advertisement': {
+      const d = parseTextContent(text)
+      return (
+        <div className="ad-block" style={{
+          margin: '0.75em 0', textAlign: 'center', border: '1px solid var(--ink-faded)',
+          padding: '8px', fontStyle: 'italic',
+          ...textStyleOverrides('advertisement', d.size, d.align),
+        }}>
+          {d.text}
         </div>
       )
+    }
+    case 'social_links': {
+      const d = parseJson<{ align?: string; size?: string; style?: string; links?: Record<string, string> }>(text, {})
+      return <SocialLinksWidget data={d} />
+    }
     case 'cta': {
       const d = parseJson<{ text: string; url: string; style: string; size?: string; align?: string }>(text, { text: 'Subscribe Now', url: '/pricing', style: 'dark' })
       return (
@@ -323,8 +519,10 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
         </div>
       )
     }
-    case 'section_label':
-      return <div className="section-label" style={{ margin: '0.5em 0' }}>{text}</div>
+    case 'section_label': {
+      const d = parseTextContent(text)
+      return <div className="section-label" style={{ margin: '0.5em 0', ...textStyleOverrides('section_label', d.size, d.align) }}>{d.text}</div>
+    }
     case 'rule':
       return <div className="rule-triple" style={{ margin: '0.5em 0' }} />
     case 'ornament':
@@ -790,12 +988,14 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   // themselves overlaying something (no overlay-on-overlay chains) or this block itself.
   const overlayTargets = allBlocks.filter((b) => b.id !== block.id && b.blockKey && !b.overlayOf)
 
-  // Simple text content
-  const [text, setText] = useState(() => {
-    // For JSON blocks, we'll have separate fields
-    if (['image', 'cta'].includes(block.blockType)) return block.content
-    return block.content
-  })
+  // Simple text content — headline/subheadline/byline/dateline/section_label/
+  // advertisement/pullquote/body store {text, align, size} JSON; parseTextContent
+  // extracts just the text portion here (and falls back cleanly for legacy plain-
+  // string content), while other block types keep using raw content directly.
+  const parsedText = TEXT_STYLED_TYPES.includes(block.blockType) ? parseTextContent(block.content) : null
+  const [text, setText] = useState(() => (parsedText ? parsedText.text : block.content))
+  const [textAlign, setTextAlign] = useState(parsedText?.align ?? '')
+  const [textSize, setTextSize] = useState(parsedText?.size ?? '')
 
   // Image-specific fields
   const imgData = parseJson<{ url: string; alt: string; caption: string; width: number; fit: string }>(block.blockType === 'image' ? block.content : '{}', { url: '', alt: '', caption: '', width: 100, fit: 'fit' })
@@ -843,6 +1043,16 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   // Account widget fields
   const accountData = parseJson<{ align?: string }>(block.blockType === 'account_widget' ? block.content : '{}', {})
   const [accountAlign, setAccountAlign] = useState(accountData.align ?? 'center')
+
+  // Social links fields
+  const socialData = parseJson<{ align?: string; size?: string; style?: string; links?: Record<string, string> }>(block.blockType === 'social_links' ? block.content : '{}', {})
+  const [socialAlign, setSocialAlign] = useState(socialData.align ?? 'center')
+  const [socialSize, setSocialSize] = useState(socialData.size ?? 'medium')
+  const [socialStyle, setSocialStyle] = useState(socialData.style ?? 'outline')
+  const [socialLinks, setSocialLinks] = useState<Record<string, string>>(socialData.links ?? {})
+  function setSocialLink(key: string, url: string) {
+    setSocialLinks((prev) => ({ ...prev, [key]: url }))
+  }
 
   // Ornament preset
   const [ornament, setOrnament] = useState(block.blockType === 'ornament' ? (block.content || '⸻ ✦ ⸻') : '⸻ ✦ ⸻')
@@ -910,10 +1120,14 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   }
 
   function buildContent(): string {
+    if (TEXT_STYLED_TYPES.includes(type)) {
+      return JSON.stringify({ text, align: textAlign, size: textSize })
+    }
     switch (type) {
       case 'image': return JSON.stringify({ url: imgUrl, alt: imgAlt, caption: imgCaption, width: imgWidth, fit: imgFit })
       case 'cta':   return JSON.stringify({ text: ctaText, url: ctaUrl, style: ctaStyle, size: ctaSize, align: ctaAlign })
       case 'account_widget': return JSON.stringify({ align: accountAlign })
+      case 'social_links': return JSON.stringify({ align: socialAlign, size: socialSize, style: socialStyle, links: Object.fromEntries(Object.entries(socialLinks).filter(([, v]) => v.trim())) })
       case 'ornament': return ornament
       case 'spacer': return String(spacerHeight)
       case 'blank': return JSON.stringify({ height: blankHeight, backgroundColor: blankBg, bordered: blankBordered })
@@ -1083,6 +1297,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                 placeholder={BLOCK_TYPES.find((t) => t.value === type)?.description ?? ''}
                 style={{ ...inputStyle, fontFamily: type === 'headline' || type === 'subheadline' ? "'Playfair Display', serif" : "'Libre Baskerville', serif", fontSize: type === 'headline' ? '15px' : '13px' }}
               />
+              <TextSizeAlignRow size={textSize} align={textAlign} onSize={setTextSize} onAlign={setTextAlign} />
             </div>
           )}
 
@@ -1097,6 +1312,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                 minHeight={200}
               />
               <HelpText>Formatting is applied with the toolbar above.</HelpText>
+              <TextSizeAlignRow size={textSize} align={textAlign} onSize={setTextSize} onAlign={setTextAlign} />
             </div>
           )}
 
@@ -1110,6 +1326,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                 placeholder="A memorable quote or excerpt from the article…"
                 minHeight={80}
               />
+              <TextSizeAlignRow size={textSize} align={textAlign} onSize={setTextSize} onAlign={setTextAlign} />
             </div>
           )}
 
@@ -1231,6 +1448,40 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                 {ALIGN_OPTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
               </select>
               <HelpText>Which side of its column the sign-in prompt (or profile links, once signed in) sits on.</HelpText>
+            </div>
+          )}
+
+          {/* ── SOCIAL LINKS ── */}
+          {type === 'social_links' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Icon size</FieldLabel>
+                  <select value={socialSize} onChange={(e) => setSocialSize(e.target.value)} style={selectStyle}>
+                    {BUTTON_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Alignment</FieldLabel>
+                  <select value={socialAlign} onChange={(e) => setSocialAlign(e.target.value)} style={selectStyle}>
+                    {ALIGN_OPTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Icon style</FieldLabel>
+                  <select value={socialStyle} onChange={(e) => setSocialStyle(e.target.value)} style={selectStyle}>
+                    <option value="outline">Outline</option>
+                    <option value="filled">Filled</option>
+                  </select>
+                </div>
+              </div>
+              {SOCIAL_PLATFORMS.map((p) => (
+                <div key={p.key}>
+                  <FieldLabel>{p.label}</FieldLabel>
+                  <input type="url" value={socialLinks[p.key] ?? ''} onChange={(e) => setSocialLink(p.key, e.target.value)} placeholder="https://…" style={inputStyle} />
+                </div>
+              ))}
+              <HelpText>Leave a field blank to hide that icon — only the profiles you fill in will show up.</HelpText>
             </div>
           )}
 
@@ -1359,6 +1610,9 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                         type="url" value={item.image} onChange={(e) => updateStepItem(i, { image: e.target.value })}
                         placeholder="or paste an image URL" style={{ ...inputStyle, fontSize: 11 }}
                       />
+                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#b8b090' }}>
+                        Best size: ~150–200px square, transparent PNG or SVG works best.
+                      </div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <input
                           type="text" value={item.buttonText ?? ''} onChange={(e) => updateStepItem(i, { buttonText: e.target.value })}
@@ -1526,6 +1780,25 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 function HelpText({ children }: { children: React.ReactNode }) {
   return <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '10px', color: '#b8b090', marginTop: '3px' }}>{children}</div>
+}
+
+function TextSizeAlignRow({ size, align, onSize, onAlign }: { size: string; align: string; onSize: (v: string) => void; onAlign: (v: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+      <div style={{ flex: 1 }}>
+        <FieldLabel>Text size</FieldLabel>
+        <select value={size} onChange={(e) => onSize(e.target.value)} style={selectStyle}>
+          {TEXT_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      </div>
+      <div style={{ flex: 1 }}>
+        <FieldLabel>Alignment</FieldLabel>
+        <select value={align} onChange={(e) => onAlign(e.target.value)} style={selectStyle}>
+          {TEXT_ALIGN_OPTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+        </select>
+      </div>
+    </div>
+  )
 }
 
 // ─── Column layout config ────────────────────────────────────────────────────
