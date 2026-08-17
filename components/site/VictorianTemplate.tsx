@@ -69,6 +69,7 @@ export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, ma
               isPlaceholder={false}
               products={products}
               currency={currency}
+              currentUser={currentUser}
             />
           </div>
         )}

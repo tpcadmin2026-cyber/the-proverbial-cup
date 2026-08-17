@@ -1,10 +1,11 @@
 import { getSetting } from '@/lib/settings'
 import { getFooterPage } from '@/lib/headerFooterPages'
+import { getCurrentUser } from '@/lib/currentUser'
 import { db } from '@/lib/db'
 import { SiteFooter } from './SiteFooter'
 
 export async function FooterWrapper() {
-  const [siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog, showAccountLink, footerPage, products, currency] = await Promise.all([
+  const [siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog, showAccountLink, footerPage, products, currency, currentUser] = await Promise.all([
     getSetting<string>('site.name',             'The Victorian Illustrated Gazette'),
     getSetting<string>('site.copyrightText',    '© The Victorian Illustrated Gazette. All rights reserved.'),
     getSetting<string>('site.contactEmail',     ''),
@@ -23,6 +24,7 @@ export async function FooterWrapper() {
       select: { id: true, slug: true, name: true, priceInCents: true },
     }),
     getSetting<string>('payments.currency', 'USD'),
+    getCurrentUser(),
   ])
 
   return (
@@ -55,6 +57,7 @@ export async function FooterWrapper() {
       }))}
       products={products}
       currency={currency}
+      currentUser={currentUser}
     />
   )
 }

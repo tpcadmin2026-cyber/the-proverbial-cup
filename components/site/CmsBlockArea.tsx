@@ -66,6 +66,18 @@ const ORNAMENT_PRESETS = [
   '❧ ✦ ❧', '⸻ ✦ ⸻', '✦ ✦ ✦', '❦', '☙ ❧', '◈', '⁂', '✤', '❊', '⁕ ⁕ ⁕',
 ]
 
+export const STEPS_SIZES = [
+  { value: 'small',  label: 'Small' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'large',  label: 'Large' },
+] as const
+
+const STEPS_SIZE_SCALE: Record<string, { icon: number; title: string; text: string; titleGap: string }> = {
+  small:  { icon: 40, title: '0.75em', text: '0.7em',  titleGap: '3px' },
+  medium: { icon: 56, title: '0.85em', text: '0.8em',  titleGap: '4px' },
+  large:  { icon: 76, title: '1.05em', text: '0.9em',  titleGap: '5px' },
+}
+
 function parseJson<T>(str: string, fallback: T): T {
   try { return JSON.parse(str) as T } catch { return fallback }
 }
@@ -240,8 +252,9 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       )
     }
     case 'steps': {
-      const d = parseJson<{ title: string; items: { image: string; title: string; text: string }[] }>(text, { title: '', items: [] })
+      const d = parseJson<{ title: string; size?: string; items: { image: string; title: string; text: string; text2?: string }[] }>(text, { title: '', items: [] })
       if (!d.title && d.items.length === 0) return null
+      const scale = STEPS_SIZE_SCALE[d.size ?? 'medium'] ?? STEPS_SIZE_SCALE.medium
       return (
         <div style={{ margin: '1em 0' }}>
           {d.title && (
@@ -253,15 +266,18 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
                 <div key={i} style={{ textAlign: 'center' }}>
                   {item.image && (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={item.image} alt={item.title} style={{ width: '56px', height: '56px', objectFit: 'contain', margin: '0 auto 10px' }} />
+                    <img src={item.image} alt={item.title} style={{ width: `${scale.icon}px`, height: `${scale.icon}px`, objectFit: 'contain', margin: '0 auto 10px' }} />
                   )}
                   {item.title && (
-                    <div style={{ fontFamily: 'var(--font-smallcaps)', fontWeight: 'bold', fontSize: '0.85em', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                    <div style={{ fontFamily: 'var(--font-smallcaps)', fontWeight: 'bold', fontSize: scale.title, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: scale.titleGap }}>
                       {item.title}
                     </div>
                   )}
                   {item.text && (
-                    <div className="body-text" style={{ fontSize: '0.8em', color: 'var(--ink-faded)' }}>{item.text}</div>
+                    <div className="body-text" style={{ fontSize: scale.text, color: 'var(--ink-faded)' }}>{item.text}</div>
+                  )}
+                  {item.text2 && (
+                    <div className="body-text" style={{ fontSize: scale.text, color: 'var(--ink-faded)', marginTop: '4px' }}>{item.text2}</div>
                   )}
                 </div>
               ))}
@@ -325,37 +341,36 @@ function getVideoEmbedUrl(url: string): string | null {
 // per page load and threaded down — no client-side session fetch needed.
 
 function AccountWidget({ currentUser }: { currentUser?: CurrentUser | null }) {
-  const boxStyle: React.CSSProperties = {
-    margin: '0.75em 0', padding: '14px 16px',
-    textAlign: 'center',
+  const wrapStyle: React.CSSProperties = {
+    margin: '0.25em 0', textAlign: 'center',
+    fontSize: '0.72em', lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
   }
   const linkStyle: React.CSSProperties = {
-    display: 'inline-block', margin: '0 8px', fontSize: '0.8em',
     color: 'var(--red)', textDecoration: 'underline',
   }
+  const sepStyle: React.CSSProperties = { color: 'var(--ink-faded)', margin: '0 5px' }
 
   if (!currentUser) {
     return (
-      <div style={boxStyle}>
-        <div className="body-text" style={{ marginBottom: '8px' }}>Have an account?</div>
+      <div style={wrapStyle}>
         <a href="/login" style={linkStyle}>Sign in</a>
-        <span style={{ color: 'var(--ink-faded)' }}>·</span>
-        <a href="/signup" style={linkStyle}>Create an account</a>
+        <span style={sepStyle}>·</span>
+        <a href="/signup" style={linkStyle}>Create account</a>
       </div>
     )
   }
 
+  const firstName = (currentUser.name || currentUser.email).split(' ')[0]
+
   return (
-    <div style={boxStyle}>
-      <div className="body-text" style={{ marginBottom: '8px' }}>
-        Welcome back, {currentUser.name || currentUser.email}
-        {currentUser.planName && <> — <em>{currentUser.planName}</em></>}
-      </div>
-      <a href="/account" style={linkStyle}>My Profile</a>
-      <span style={{ color: 'var(--ink-faded)' }}>·</span>
-      <a href="/account?tab=orders" style={linkStyle}>Purchase History</a>
-      <span style={{ color: 'var(--ink-faded)' }}>·</span>
-      <a href="/account?tab=overview" style={linkStyle}>Subscription</a>
+    <div style={wrapStyle}>
+      <span className="body-text" style={{ fontWeight: 'bold' }}>Hi, {firstName}</span>
+      <span style={sepStyle}>·</span>
+      <a href="/account" style={linkStyle}>Profile</a>
+      <span style={sepStyle}>·</span>
+      <a href="/account?tab=orders" style={linkStyle}>Orders</a>
+      <span style={sepStyle}>·</span>
+      <a href="/account?tab=overview" style={linkStyle}>Plan</a>
     </div>
   )
 }
@@ -799,19 +814,20 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   const [blankBordered, setBlankBordered] = useState(blankData.bordered ?? false)
 
   // Steps / Features fields
-  const stepsData = parseJson<{ title: string; items: { image: string; title: string; text: string }[] }>(
+  const stepsData = parseJson<{ title: string; size?: string; items: { image: string; title: string; text: string; text2?: string }[] }>(
     block.blockType === 'steps' ? block.content : '{}',
-    { title: '', items: [{ image: '', title: '', text: '' }] }
+    { title: '', size: 'medium', items: [{ image: '', title: '', text: '', text2: '' }] }
   )
   const [stepsTitle, setStepsTitle] = useState(stepsData.title ?? '')
-  const [stepsItems, setStepsItems] = useState(stepsData.items?.length > 0 ? stepsData.items : [{ image: '', title: '', text: '' }])
+  const [stepsSize, setStepsSize] = useState(stepsData.size ?? 'medium')
+  const [stepsItems, setStepsItems] = useState(stepsData.items?.length > 0 ? stepsData.items : [{ image: '', title: '', text: '', text2: '' }])
   const [stepsUploadingIndex, setStepsUploadingIndex] = useState<number | null>(null)
 
-  function updateStepItem(i: number, patch: Partial<{ image: string; title: string; text: string }>) {
+  function updateStepItem(i: number, patch: Partial<{ image: string; title: string; text: string; text2: string }>) {
     setStepsItems((prev) => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it))
   }
   function addStepItem() {
-    setStepsItems((prev) => [...prev, { image: '', title: '', text: '' }])
+    setStepsItems((prev) => [...prev, { image: '', title: '', text: '', text2: '' }])
   }
   function removeStepItem(i: number) {
     setStepsItems((prev) => prev.filter((_, idx) => idx !== i))
@@ -855,7 +871,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
       case 'ornament': return ornament
       case 'spacer': return String(spacerHeight)
       case 'blank': return JSON.stringify({ height: blankHeight, backgroundColor: blankBg, bordered: blankBordered })
-      case 'steps': return JSON.stringify({ title: stepsTitle, items: stepsItems.filter((it) => it.image || it.title || it.text) })
+      case 'steps': return JSON.stringify({ title: stepsTitle, size: stepsSize, items: stepsItems.filter((it) => it.image || it.title || it.text || it.text2) })
       case 'featured_products': return JSON.stringify({ heading: fpHeading, productIds: fpProductIds })
       default: return text
     }
@@ -1199,9 +1215,19 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
           {/* ── STEPS / FEATURES ── */}
           {type === 'steps' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <FieldLabel>Section title <span style={{ color: '#b8b090', fontWeight: 400 }}>(centered above the points)</span></FieldLabel>
-                <input type="text" value={stepsTitle} onChange={(e) => setStepsTitle(e.target.value)} placeholder="How It Works" style={inputStyle} />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Section title <span style={{ color: '#b8b090', fontWeight: 400 }}>(centered above the points)</span></FieldLabel>
+                  <input type="text" value={stepsTitle} onChange={(e) => setStepsTitle(e.target.value)} placeholder="How It Works" style={inputStyle} />
+                </div>
+                <div style={{ width: '130px' }}>
+                  <FieldLabel>Size</FieldLabel>
+                  <select value={stepsSize} onChange={(e) => setStepsSize(e.target.value)} style={selectStyle}>
+                    {STEPS_SIZES.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {stepsItems.map((item, i) => (
@@ -1249,6 +1275,10 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                         placeholder="Tell us your taste preferences." style={inputStyle}
                       />
                       <input
+                        type="text" value={item.text2 ?? ''} onChange={(e) => updateStepItem(i, { text2: e.target.value })}
+                        placeholder="Optional second line of description" style={inputStyle}
+                      />
+                      <input
                         type="url" value={item.image} onChange={(e) => updateStepItem(i, { image: e.target.value })}
                         placeholder="or paste an image URL" style={{ ...inputStyle, fontSize: 11 }}
                       />
@@ -1263,7 +1293,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
               >
                 + Add point
               </button>
-              <HelpText>Add as many points as you like — each gets its own image, title, and short line of text. Works well spanning all columns.</HelpText>
+              <HelpText>Add as many points as you like — each gets its own image, title, and up to two lines of description. Use Size to scale the whole row up or down. Works well spanning all columns.</HelpText>
             </div>
           )}
 

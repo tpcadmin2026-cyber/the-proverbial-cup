@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CmsBlockArea, type ProductSummary } from './CmsBlockArea'
+import { CmsBlockArea, type ProductSummary, type CurrentUser } from './CmsBlockArea'
 import type { EditBlock } from './CmsEditContext'
 
 interface Props {
@@ -18,9 +18,10 @@ interface Props {
   customBlocks?: EditBlock[]
   products?: ProductSummary[]
   currency?: string
+  currentUser?: CurrentUser | null
 }
 
-export function SiteFooter({ siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog, showAccountLink, footerPageId, customBlocks = [], products = [], currency = 'USD' }: Props) {
+export function SiteFooter({ siteName, copyright, contactEmail, address, termsUrl, privacyUrl, twitter, instagram, facebook, showChangelog, showAccountLink, footerPageId, customBlocks = [], products = [], currency = 'USD', currentUser = null }: Props) {
   const hasAddress = address.trim() !== ''
   const hasSocial = twitter || instagram || facebook
 
@@ -49,6 +50,7 @@ export function SiteFooter({ siteName, copyright, contactEmail, address, termsUr
               isPlaceholder={false}
               products={products}
               currency={currency}
+              currentUser={currentUser}
             />
           </div>
         )}
