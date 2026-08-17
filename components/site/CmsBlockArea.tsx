@@ -748,9 +748,9 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
 
   // Image-specific fields
   const imgData = parseJson<{ url: string; alt: string; caption: string; width: number; fit: string }>(block.blockType === 'image' ? block.content : '{}', { url: '', alt: '', caption: '', width: 100, fit: 'fit' })
-  const [imgUrl, setImgUrl] = useState(imgData.url)
-  const [imgAlt, setImgAlt] = useState(imgData.alt)
-  const [imgCaption, setImgCaption] = useState(imgData.caption)
+  const [imgUrl, setImgUrl] = useState(imgData.url ?? '')
+  const [imgAlt, setImgAlt] = useState(imgData.alt ?? '')
+  const [imgCaption, setImgCaption] = useState(imgData.caption ?? '')
   const [imgWidth, setImgWidth] = useState(imgData.width ?? 100)
   const [imgFit, setImgFit] = useState(imgData.fit ?? 'fit')
   const [imgUploading, setImgUploading] = useState(false)
@@ -783,9 +783,9 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
 
   // CTA-specific fields
   const ctaData = parseJson<{ text: string; url: string; style: string }>(block.blockType === 'cta' ? block.content : '{}', { text: 'Subscribe Now', url: '/pricing', style: 'dark' })
-  const [ctaText, setCtaText] = useState(ctaData.text)
-  const [ctaUrl, setCtaUrl] = useState(ctaData.url)
-  const [ctaStyle, setCtaStyle] = useState(ctaData.style)
+  const [ctaText, setCtaText] = useState(ctaData.text ?? 'Subscribe Now')
+  const [ctaUrl, setCtaUrl] = useState(ctaData.url ?? '/pricing')
+  const [ctaStyle, setCtaStyle] = useState(ctaData.style ?? 'dark')
 
   // Ornament preset
   const [ornament, setOrnament] = useState(block.blockType === 'ornament' ? (block.content || '⸻ ✦ ⸻') : '⸻ ✦ ⸻')
@@ -804,8 +804,8 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
     block.blockType === 'steps' ? block.content : '{}',
     { title: '', items: [{ image: '', title: '', text: '' }] }
   )
-  const [stepsTitle, setStepsTitle] = useState(stepsData.title)
-  const [stepsItems, setStepsItems] = useState(stepsData.items.length > 0 ? stepsData.items : [{ image: '', title: '', text: '' }])
+  const [stepsTitle, setStepsTitle] = useState(stepsData.title ?? '')
+  const [stepsItems, setStepsItems] = useState(stepsData.items?.length > 0 ? stepsData.items : [{ image: '', title: '', text: '' }])
   const [stepsUploadingIndex, setStepsUploadingIndex] = useState<number | null>(null)
 
   function updateStepItem(i: number, patch: Partial<{ image: string; title: string; text: string }>) {
@@ -838,8 +838,8 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
 
   // Featured products fields
   const fpData = parseJson<{ heading: string; productIds: string[] }>(block.blockType === 'featured_products' ? block.content : '{}', { heading: 'Featured Products', productIds: [] })
-  const [fpHeading, setFpHeading] = useState(fpData.heading)
-  const [fpProductIds, setFpProductIds] = useState<string[]>(fpData.productIds)
+  const [fpHeading, setFpHeading] = useState(fpData.heading ?? 'Featured Products')
+  const [fpProductIds, setFpProductIds] = useState<string[]>(fpData.productIds ?? [])
 
   function toggleFeaturedProduct(id: string) {
     setFpProductIds((prev) => {
