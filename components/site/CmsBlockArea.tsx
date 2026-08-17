@@ -327,7 +327,6 @@ function getVideoEmbedUrl(url: string): string | null {
 function AccountWidget({ currentUser }: { currentUser?: CurrentUser | null }) {
   const boxStyle: React.CSSProperties = {
     margin: '0.75em 0', padding: '14px 16px',
-    border: '1px solid var(--ink-faded)', borderRadius: '3px',
     textAlign: 'center',
   }
   const linkStyle: React.CSSProperties = {
