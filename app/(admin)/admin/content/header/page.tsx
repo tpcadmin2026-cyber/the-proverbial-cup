@@ -38,7 +38,7 @@ export default async function HeaderAdminPage() {
       label="Header"
       helpText="These blocks appear as a banner above the masthead on every page — use them for an announcement, promo, or seasonal message. Leave empty to show nothing."
       initialBlocks={blocks}
-      columnCount={1}
+      columnCount={3}
       layout={page.layout}
       products={products}
       currency={currency}

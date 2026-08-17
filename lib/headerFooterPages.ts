@@ -11,14 +11,14 @@ export async function ensureHeaderFooterPages() {
   await Promise.all([
     db.cmsPage.upsert({
       where: { slug: HEADER_SLUG },
-      update: {},
+      update: { layout: 'columns-3' },
       create: {
         slug: HEADER_SLUG,
         tabLabel: 'Header',
         tabNumeral: '',
         pageOrder: 0,
         pageType: 'header',
-        layout: 'columns-1',
+        layout: 'columns-3',
         published: true,
         showInNav: false,
       },

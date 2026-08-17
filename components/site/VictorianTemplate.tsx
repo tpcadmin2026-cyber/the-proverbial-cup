@@ -63,8 +63,8 @@ export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, ma
           <CmsBlockArea
             pageId={headerPageId}
             initialBlocks={headerBlocks}
-            columnCount={1}
-            layout="columns-1"
+            columnCount={3}
+            layout="columns-3"
             isPlaceholder={false}
             products={products}
             currency={currency}
