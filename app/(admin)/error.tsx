@@ -13,12 +13,10 @@ export default function AdminError({
         <div className="text-4xl mb-4">⚠</div>
         <h1 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h1>
         <p className="text-sm text-gray-500 mb-4">An error occurred in the admin dashboard.</p>
-        {process.env.NODE_ENV === 'development' && (
-          <pre className="text-xs text-left bg-red-50 border border-red-200 rounded p-4 mb-4 overflow-auto max-h-48 text-red-700">
-            {error.message}
-            {error.stack && '\n\n' + error.stack}
-          </pre>
-        )}
+        <pre className="text-xs text-left bg-red-50 border border-red-200 rounded p-4 mb-4 overflow-auto max-h-48 text-red-700">
+          {error.message || 'No error message available.'}
+          {process.env.NODE_ENV === 'development' && error.stack && '\n\n' + error.stack}
+        </pre>
         {error.digest && (
           <p className="text-xs text-gray-400 mb-4">Error ID: {error.digest}</p>
         )}
