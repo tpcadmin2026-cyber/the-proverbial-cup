@@ -58,20 +58,20 @@ export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, ma
 
   return (
     <div className="shell">
-      {headerBlocks.length > 0 && headerPageId && (
-        <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--ink-faded)' }}>
-          <CmsBlockArea
-            pageId={headerPageId}
-            initialBlocks={headerBlocks}
-            columnCount={3}
-            layout="columns-3"
-            isPlaceholder={false}
-            products={products}
-            currency={currency}
-          />
-        </div>
-      )}
       <div className="site-header">
+        {headerBlocks.length > 0 && headerPageId && (
+          <div style={{ marginBottom: '4px' }}>
+            <CmsBlockArea
+              pageId={headerPageId}
+              initialBlocks={headerBlocks}
+              columnCount={3}
+              layout="columns-3"
+              isPlaceholder={false}
+              products={products}
+              currency={currency}
+            />
+          </div>
+        )}
         <div className="page-masthead">
           <div className="tagline-row">
             <span>{m.taglineLeft}</span>
