@@ -14,10 +14,13 @@ body {
 /* The Victorian newspaper homepage uses a fixed viewport layout.
    All other site pages (shop, pricing, account, etc.) scroll normally. */
 .site-root { width: 100%; }
-/* The newspaper .shell below sets its own explicit height: 100vh, so it still
-   fills the first screen exactly as before — this just stops the outer
-   wrapper from clipping anything (the footer) rendered after it. */
-.site-root.newspaper-layout { min-height: 100vh; }
+/* Fixed to exactly one screen — .page (below) handles its own scrolling
+   internally, and the site footer is rendered as part of that same scrollable
+   area (see VictorianTemplate) rather than after this element. Letting this
+   wrapper scroll too, with the fixed-height .shell inside it, creates two
+   competing scroll containers on the same screen — scrolling near the
+   boundary between them feels like it randomly "sticks". */
+.site-root.newspaper-layout { height: 100vh; overflow: hidden; }
 
 /* ── Victorian template ────────────────────────────────────────────────────── */
 :root {

@@ -72,7 +72,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <CartProvider>
         <div className={`site-root${isNewspaper ? ' newspaper-layout' : ''}`}>
           {children}
-          <FooterWrapper />
+          {/* On the newspaper homepage, the footer instead renders once per
+              tab/page inside VictorianTemplate — see the comment there for why. */}
+          {!isNewspaper && <FooterWrapper />}
           {aiEnabled && (
             <ChatWidget
               personaName={personaName}

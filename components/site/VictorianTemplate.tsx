@@ -1,6 +1,7 @@
 import type { CmsPage, ContentBlock, NavItem } from '@prisma/client'
 import { VictorianNav } from './VictorianNav'
 import { CmsBlockArea, type ProductSummary } from './CmsBlockArea'
+import { FooterWrapper } from './FooterWrapper'
 import type { EditBlock } from './CmsEditContext'
 
 type PageWithBlocks = CmsPage & { blocks: ContentBlock[] }
@@ -201,6 +202,16 @@ export function VictorianTemplate({ pages, navItems, siteName, mastheadTitle, ma
                 <span>{siteName}</span>
                 <span className="pg-number">PAGE {p.tabNumeral}</span>
                 <span>All rights reserved</span>
+              </div>
+
+              {/* The site footer lives inside each page's own scrollable area,
+                  not after .shell — .shell is a fixed one-screen viewport with
+                  .page handling its own internal scroll, so a footer placed
+                  after .shell would need the OUTER page to scroll too, which
+                  creates two competing scroll containers on screen at once
+                  (scrolling near the boundary between them feels "stuck"). */}
+              <div style={{ marginTop: '20px' }}>
+                <FooterWrapper />
               </div>
             </div>
           )

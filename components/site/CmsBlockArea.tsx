@@ -79,6 +79,20 @@ const ORNAMENT_PRESETS = [
   '❧ ✦ ❧', '⸻ ✦ ⸻', '✦ ✦ ✦', '❦', '☙ ❧', '◈', '⁂', '✤', '❊', '⁕ ⁕ ⁕',
 ]
 
+export const FP_IMAGE_SIZES = [
+  { value: 'small',  label: 'Small' },
+  { value: 'medium', label: 'Medium (default)' },
+  { value: 'large',  label: 'Large' },
+] as const
+
+// "medium" (undefined) leaves the tile's width uncapped — each product still
+// gets an equal share of the row exactly as it always has.
+const FP_IMAGE_MAXWIDTH: Record<string, string | undefined> = {
+  small: '130px',
+  medium: undefined,
+  large: '260px',
+}
+
 export const STEPS_SIZES = [
   { value: 'small',  label: 'Small' },
   { value: 'medium', label: 'Medium' },
@@ -461,11 +475,15 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       )
     }
     case 'featured_products': {
-      const d = parseJson<{ heading: string; productIds: string[]; background?: WidgetBackground }>(text, { heading: '', productIds: [] })
+      const d = parseJson<{ heading: string; productIds: string[]; imageSize?: string; background?: WidgetBackground }>(text, { heading: '', productIds: [] })
       const items = d.productIds
         .map((id) => products.find((p) => p.id === id))
         .filter((p): p is ProductSummary => !!p)
       if (items.length === 0) return null
+      // Each tile still gets an equal share of the row (unchanged default layout)
+      // — a size choice only caps how big the photo+card is allowed to grow
+      // *within* that share, centered, rather than reshaping the grid itself.
+      const fpMaxWidth = FP_IMAGE_MAXWIDTH[d.imageSize ?? 'medium']
       return (
         <div style={{ margin: '0.75em 0', ...widgetBackgroundStyle(d.background) }}>
           {d.heading && <div className="section-label" style={{ marginBottom: '8px' }}>{d.heading}</div>}
@@ -480,6 +498,7 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
                     display: 'block', textAlign: 'center', textDecoration: 'none', color: 'inherit',
                     border: '1px solid var(--ink-faded)', borderRadius: '2px', padding: '10px 4px',
                     backgroundColor: 'rgba(255,255,255,0.4)',
+                    maxWidth: fpMaxWidth, margin: fpMaxWidth ? '0 auto' : undefined,
                   }}
                 >
                   {img ? (
@@ -526,7 +545,7 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       )
     }
     case 'steps': {
-      const d = parseJson<{ title: string; size?: string; align?: string; background?: WidgetBackground; items: { image: string; title: string; text: string; text2?: string; buttonText?: string; buttonUrl?: string; buttonSize?: string }[] }>(text, { title: '', items: [] })
+      const d = parseJson<{ title: string; size?: string; align?: string; background?: WidgetBackground; items: { image: string; title: string; text: string; text2?: string; align?: string; buttonText?: string; buttonUrl?: string; buttonSize?: string }[] }>(text, { title: '', items: [] })
       if (!d.title && d.items.length === 0) return null
       const scale = STEPS_SIZE_SCALE[d.size ?? 'medium'] ?? STEPS_SIZE_SCALE.medium
       const align = d.align ?? 'center'
@@ -551,30 +570,38 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
             // row pinned to the start instead of centered as a group. Flexbox's
             // justify-content centers each wrapped row correctly regardless.
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: justify === 'start' ? 'flex-start' : justify === 'end' ? 'flex-end' : 'center' }}>
-              {d.items.map((item, i) => (
-                <div key={i} style={{ textAlign: align as React.CSSProperties['textAlign'], flex: '1 1 140px', maxWidth: '220px' }}>
-                  {item.image && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={item.image} alt={item.title} style={{ width: `${scale.icon}px`, height: `${scale.icon}px`, objectFit: 'contain', margin: align === 'left' ? '0 0 10px' : align === 'right' ? '0 0 10px auto' : '0 auto 10px' }} />
-                  )}
-                  {item.title && (
-                    <div style={{ fontFamily: 'var(--font-smallcaps)', fontWeight: 'bold', fontSize: scale.title, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: scale.titleGap }}>
-                      {item.title}
-                    </div>
-                  )}
-                  {item.text && (
-                    <div className="body-text" style={{ fontSize: scale.text, color: 'var(--ink-faded)' }}>{item.text}</div>
-                  )}
-                  {item.text2 && (
-                    <div className="body-text" style={{ fontSize: scale.text, color: 'var(--ink-faded)', marginTop: '4px' }}>{item.text2}</div>
-                  )}
-                  {item.buttonText && item.buttonUrl && (
-                    <div style={{ marginTop: '10px' }}>
-                      <a href={item.buttonUrl} style={ctaButtonStyle('dark', item.buttonSize ?? 'small')}>{item.buttonText}</a>
-                    </div>
-                  )}
-                </div>
-              ))}
+              {d.items.map((item, i) => {
+                // Each point can override the block's overall alignment. This also
+                // has to be set explicitly on the text lines themselves, not just
+                // inherited from the wrapper — .body-text (the real, working class
+                // used below) sets text-align: justify, which otherwise wins over
+                // whatever alignment the parent wrapper is given.
+                const itemAlign = (item.align ?? align) as React.CSSProperties['textAlign']
+                return (
+                  <div key={i} style={{ textAlign: itemAlign, flex: '1 1 140px', maxWidth: '220px' }}>
+                    {item.image && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={item.image} alt={item.title} style={{ width: `${scale.icon}px`, height: `${scale.icon}px`, objectFit: 'contain', margin: itemAlign === 'left' ? '0 0 10px' : itemAlign === 'right' ? '0 0 10px auto' : '0 auto 10px' }} />
+                    )}
+                    {item.title && (
+                      <div style={{ fontFamily: 'var(--font-smallcaps)', fontWeight: 'bold', fontSize: scale.title, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: scale.titleGap, textAlign: itemAlign }}>
+                        {item.title}
+                      </div>
+                    )}
+                    {item.text && (
+                      <div className="body-text" style={{ fontSize: scale.text, color: 'var(--ink-faded)', textAlign: itemAlign }}>{item.text}</div>
+                    )}
+                    {item.text2 && (
+                      <div className="body-text" style={{ fontSize: scale.text, color: 'var(--ink-faded)', marginTop: '4px', textAlign: itemAlign }}>{item.text2}</div>
+                    )}
+                    {item.buttonText && item.buttonUrl && (
+                      <div style={{ marginTop: '10px' }}>
+                        <a href={item.buttonUrl} style={ctaButtonStyle('dark', item.buttonSize ?? 'small')}>{item.buttonText}</a>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -1138,7 +1165,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   const [blankBordered, setBlankBordered] = useState(blankData.bordered ?? false)
 
   // Steps / Features fields
-  type StepItem = { image: string; title: string; text: string; text2?: string; buttonText?: string; buttonUrl?: string; buttonSize?: string }
+  type StepItem = { image: string; title: string; text: string; text2?: string; align?: string; buttonText?: string; buttonUrl?: string; buttonSize?: string }
   const stepsData = parseJson<{ title: string; size?: string; align?: string; items: StepItem[] }>(
     block.blockType === 'steps' ? block.content : '{}',
     { title: '', size: 'medium', align: 'center', items: [{ image: '', title: '', text: '', text2: '' }] }
@@ -1178,9 +1205,10 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
   }
 
   // Featured products fields
-  const fpData = parseJson<{ heading: string; productIds: string[] }>(block.blockType === 'featured_products' ? block.content : '{}', { heading: 'Featured Products', productIds: [] })
+  const fpData = parseJson<{ heading: string; productIds: string[]; imageSize?: string }>(block.blockType === 'featured_products' ? block.content : '{}', { heading: 'Featured Products', productIds: [] })
   const [fpHeading, setFpHeading] = useState(fpData.heading ?? 'Featured Products')
   const [fpProductIds, setFpProductIds] = useState<string[]>(fpData.productIds ?? [])
+  const [fpImageSize, setFpImageSize] = useState(fpData.imageSize ?? 'medium')
 
   function toggleFeaturedProduct(id: string) {
     setFpProductIds((prev) => {
@@ -1204,7 +1232,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
       case 'spacer': return String(spacerHeight)
       case 'blank': return JSON.stringify({ height: blankHeight, backgroundColor: blankBg, bordered: blankBordered })
       case 'steps': return JSON.stringify({ title: stepsTitle, size: stepsSize, align: stepsAlign, items: stepsItems.filter((it) => it.image || it.title || it.text || it.text2 || it.buttonText), background })
-      case 'featured_products': return JSON.stringify({ heading: fpHeading, productIds: fpProductIds, background })
+      case 'featured_products': return JSON.stringify({ heading: fpHeading, productIds: fpProductIds, imageSize: fpImageSize, background })
       default: return text
     }
   }
@@ -1684,10 +1712,19 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                         type="text" value={item.text} onChange={(e) => updateStepItem(i, { text: e.target.value })}
                         placeholder="Tell us your taste preferences." style={inputStyle}
                       />
-                      <input
-                        type="text" value={item.text2 ?? ''} onChange={(e) => updateStepItem(i, { text2: e.target.value })}
-                        placeholder="Optional second line of description" style={inputStyle}
-                      />
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input
+                          type="text" value={item.text2 ?? ''} onChange={(e) => updateStepItem(i, { text2: e.target.value })}
+                          placeholder="Optional second line of description" style={{ ...inputStyle, flex: 1 }}
+                        />
+                        <select
+                          value={item.align ?? stepsAlign} onChange={(e) => updateStepItem(i, { align: e.target.value })}
+                          title="This point's alignment"
+                          style={{ ...selectStyle, width: 100 }}
+                        >
+                          {ALIGN_OPTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+                        </select>
+                      </div>
                       <input
                         type="url" value={item.image} onChange={(e) => updateStepItem(i, { image: e.target.value })}
                         placeholder="or paste an image URL" style={{ ...inputStyle, fontSize: 11 }}
@@ -1722,7 +1759,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
               >
                 + Add point
               </button>
-              <HelpText>Add as many points as you like — each gets its own image, title, up to two lines of description, and an optional button. Use Size to scale the row and Alignment to push everything left, center, or right.</HelpText>
+              <HelpText>Add as many points as you like — each gets its own image, title, up to two lines of description, an optional button, and its own alignment (next to the second description line) that overrides the section's overall Alignment above.</HelpText>
               <BackgroundFieldsGroup style={bgStyle} color={bgColor} opacity={bgOpacity} onStyle={setBgStyle} onColor={setBgColor} onOpacity={setBgOpacity} />
             </div>
           )}
@@ -1762,6 +1799,13 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                   style={inputStyle}
                 />
                 <HelpText>Shown above the products. Leave blank to hide.</HelpText>
+              </div>
+              <div>
+                <FieldLabel>Image size</FieldLabel>
+                <select value={fpImageSize} onChange={(e) => setFpImageSize(e.target.value)} style={{ ...selectStyle, maxWidth: '160px' }}>
+                  {FP_IMAGE_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+                <HelpText>Each product still gets an equal share of the row — this caps how large the photo is allowed to grow within it.</HelpText>
               </div>
               <div>
                 <FieldLabel>
