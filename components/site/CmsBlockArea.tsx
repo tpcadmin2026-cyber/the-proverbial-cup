@@ -80,17 +80,25 @@ const ORNAMENT_PRESETS = [
 ]
 
 export const FP_IMAGE_SIZES = [
+  { value: 'xsmall', label: 'Extra small' },
   { value: 'small',  label: 'Small' },
-  { value: 'medium', label: 'Medium (default)' },
+  { value: 'medium', label: 'Fill available space (default)' },
   { value: 'large',  label: 'Large' },
+  { value: 'xlarge', label: 'Extra large' },
+  { value: 'xxlarge', label: 'Extra extra large' },
 ] as const
 
 // "medium" (undefined) leaves the tile's width uncapped — each product still
-// gets an equal share of the row exactly as it always has.
+// gets an equal share of the row exactly as it always has. Note this means
+// "medium" can actually render bigger than "large"/"xlarge" when there are
+// only a few products in a wide row — those are a firm cap, not a target size.
 const FP_IMAGE_MAXWIDTH: Record<string, string | undefined> = {
+  xsmall: '80px',
   small: '130px',
   medium: undefined,
   large: '260px',
+  xlarge: '380px',
+  xxlarge: '500px',
 }
 
 export const STEPS_SIZES = [
@@ -498,7 +506,7 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
                     display: 'block', textAlign: 'center', textDecoration: 'none', color: 'inherit',
                     border: '1px solid var(--ink-faded)', borderRadius: '2px', padding: '10px 4px',
                     backgroundColor: 'rgba(255,255,255,0.4)',
-                    maxWidth: fpMaxWidth, margin: fpMaxWidth ? '0 auto' : undefined,
+                    width: '100%', maxWidth: fpMaxWidth, margin: fpMaxWidth ? '0 auto' : undefined,
                   }}
                 >
                   {img ? (
@@ -549,7 +557,6 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
       if (!d.title && d.items.length === 0) return null
       const scale = STEPS_SIZE_SCALE[d.size ?? 'medium'] ?? STEPS_SIZE_SCALE.medium
       const align = d.align ?? 'center'
-      const justify = align === 'left' ? 'start' : align === 'right' ? 'end' : 'center'
       return (
         <div style={{ margin: '1em 0', ...widgetBackgroundStyle(d.background) }}>
           {d.title && (
@@ -564,12 +571,14 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
             </div>
           )}
           {d.items.length > 0 && (
-            // flexbox + wrap, not CSS grid — with an item count that doesn't evenly
-            // divide the row (e.g. 4 items in a 3-wide row), grid's justifyItems only
-            // centers each item within its own column track, leaving a leftover last
-            // row pinned to the start instead of centered as a group. Flexbox's
-            // justify-content centers each wrapped row correctly regardless.
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: justify === 'start' ? 'flex-start' : justify === 'end' ? 'flex-end' : 'center' }}>
+            // Exactly one column per point, always one row — every point gets an
+            // equal, guaranteed share of the full width, the same as a real
+            // newspaper feature row. (Earlier attempts used auto-fit CSS grid, then
+            // wrapping flexbox with a max-width cap — both technically solved the
+            // "uneven row not centered" problem they were trying to fix, but each
+            // introduced its own new way for points to end up narrower than the
+            // full width, which is the opposite of what this block is for.)
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${d.items.length}, 1fr)`, gap: '20px' }}>
               {d.items.map((item, i) => {
                 // Each point can override the block's overall alignment. This also
                 // has to be set explicitly on the text lines themselves, not just
@@ -578,7 +587,7 @@ export function StaticBlock({ block, products = [], currency = 'USD', currentUse
                 // whatever alignment the parent wrapper is given.
                 const itemAlign = (item.align ?? align) as React.CSSProperties['textAlign']
                 return (
-                  <div key={i} style={{ textAlign: itemAlign, flex: '1 1 140px', maxWidth: '220px' }}>
+                  <div key={i} style={{ textAlign: itemAlign }}>
                     {item.image && (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={item.image} alt={item.title} style={{ width: `${scale.icon}px`, height: `${scale.icon}px`, objectFit: 'contain', margin: itemAlign === 'left' ? '0 0 10px' : itemAlign === 'right' ? '0 0 10px auto' : '0 auto 10px' }} />
@@ -1805,7 +1814,7 @@ function BlockEditModal({ block, allBlocks, onSave, onClose, columnCount, produc
                 <select value={fpImageSize} onChange={(e) => setFpImageSize(e.target.value)} style={{ ...selectStyle, maxWidth: '160px' }}>
                   {FP_IMAGE_SIZES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
-                <HelpText>Each product still gets an equal share of the row — this caps how large the photo is allowed to grow within it.</HelpText>
+                <HelpText>Each product still gets an equal share of the row — this caps how large the photo is allowed to grow within it. With only a few products in a wide row, "Fill available space" can end up bigger than "Large" or "Extra large" — those are a fixed cap, not a target size.</HelpText>
               </div>
               <div>
                 <FieldLabel>
