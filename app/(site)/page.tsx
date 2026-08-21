@@ -9,9 +9,15 @@ import { VictorianTemplate } from '@/components/site/VictorianTemplate'
 import { CmsEditProvider } from '@/components/site/CmsEditProvider'
 
 export async function generateMetadata(): Promise<Metadata> {
-  const maintenanceOn = await getSetting<boolean>('maintenance.enabled', false)
-  if (maintenanceOn) return { title: 'Under Maintenance' }
-  return { title: 'Home' }
+  // Built as a full string rather than relying on the parent layout's title
+  // template — for reasons that don't reproduce on any other page, Next.js
+  // doesn't apply that template to the bare "/" route specifically.
+  const [maintenanceOn, siteName] = await Promise.all([
+    getSetting<boolean>('maintenance.enabled', false),
+    getSetting<string>('site.name', 'My Site'),
+  ])
+  if (maintenanceOn) return { title: `Under Maintenance | ${siteName}` }
+  return { title: `Home | ${siteName}` }
 }
 
 export default async function SitePage() {
@@ -71,7 +77,7 @@ export default async function SitePage() {
     db.product.findMany({
       where: { visible: true },
       orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }],
-      select: { id: true, slug: true, name: true, priceInCents: true },
+      select: { id: true, slug: true, name: true, priceInCents: true, images: true },
     }),
     getHeaderPage(),
   ])

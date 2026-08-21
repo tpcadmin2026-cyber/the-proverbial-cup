@@ -15,12 +15,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   ])
   if (!product) return {}
   const description = product.description ? richTextToPlainText(product.description) : undefined
+  let ogImage: string | undefined
+  try {
+    const arr = product.images ? JSON.parse(product.images) : []
+    ogImage = Array.isArray(arr) && typeof arr[0] === 'string' ? arr[0] : undefined
+  } catch { /* not valid JSON — no image */ }
   return {
     title: `${product.name}`,
     description,
     openGraph: {
       title: product.name,
       description,
+      images: ogImage ? [ogImage] : undefined,
     },
   }
 }
@@ -67,6 +73,7 @@ export default async function ProductPage({
               priceInCents: product.priceInCents,
               compareAtCents: product.compareAtCents,
               inventory: product.inventory,
+              images: product.images,
               variants: product.variants.map((v) => ({
                 id: v.id,
                 name: v.name,

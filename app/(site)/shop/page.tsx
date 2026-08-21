@@ -19,6 +19,16 @@ function formatPrice(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(cents / 100)
 }
 
+function firstImage(images: string | null): string | null {
+  if (!images) return null
+  try {
+    const arr = JSON.parse(images)
+    return Array.isArray(arr) && typeof arr[0] === 'string' ? arr[0] : null
+  } catch {
+    return null
+  }
+}
+
 export default async function ShopPage() {
   const siteName = await getSetting<string>('site.name', 'The Proverbial Cup')
   if (!await isEnabled('ecommerce')) {
@@ -108,10 +118,15 @@ export default async function ShopPage() {
                   {items.map((product) => (
                     <div key={product.id} className="bg-white rounded-lg border border-[#c8c4a8] shadow-md overflow-hidden flex flex-col">
 
-                      {/* Placeholder image area */}
+                      {/* Product image */}
                       <Link href={`/shop/${product.slug}`} className="block">
-                        <div className="bg-[#f5f2e8] border-b border-[#e8e4d0] h-48 flex items-center justify-center">
-                          <span className="text-5xl text-[#c8c4a8]">☕</span>
+                        <div className="bg-[#f5f2e8] border-b border-[#e8e4d0] h-48 flex items-center justify-center overflow-hidden">
+                          {firstImage(product.images) ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={firstImage(product.images)!} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-5xl text-[#c8c4a8]">☕</span>
+                          )}
                         </div>
                       </Link>
 

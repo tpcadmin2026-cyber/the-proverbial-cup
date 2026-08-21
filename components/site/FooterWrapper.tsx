@@ -21,7 +21,7 @@ export async function FooterWrapper() {
     db.product.findMany({
       where: { visible: true },
       orderBy: [{ category: 'asc' }, { displayOrder: 'asc' }],
-      select: { id: true, slug: true, name: true, priceInCents: true },
+      select: { id: true, slug: true, name: true, priceInCents: true, images: true },
     }),
     getSetting<string>('payments.currency', 'USD'),
     getCurrentUser(),

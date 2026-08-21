@@ -16,9 +16,20 @@ interface Props {
     priceInCents: number
     compareAtCents: number | null
     inventory: number | null
+    images: string | null
     variants: Variant[]
   }
   currency: string
+}
+
+function parseImages(images: string | null): string[] {
+  if (!images) return []
+  try {
+    const arr = JSON.parse(images)
+    return Array.isArray(arr) ? arr.filter((u): u is string => typeof u === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 function formatPrice(cents: number, currency: string) {
@@ -32,6 +43,8 @@ export function ProductDetail({ product, currency }: Props) {
   )
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
+  const images = parseImages(product.images)
+  const [activeImage, setActiveImage] = useState(0)
 
   const selectedVariant = product.variants.find((v) => v.id === selectedVariantId)
   const effectivePrice = selectedVariant?.priceInCents ?? product.priceInCents
@@ -77,10 +90,34 @@ export function ProductDetail({ product, currency }: Props) {
 
       <div className="p-8 space-y-6">
 
-        {/* Image placeholder */}
-        <div className="bg-[#f5f2e8] border border-[#e8e4d0] rounded-lg h-64 flex items-center justify-center">
-          <span className="text-7xl text-[#c8c4a8]">☕</span>
-        </div>
+        {/* Product image(s) */}
+        {images.length > 0 ? (
+          <div>
+            <div className="bg-[#f5f2e8] border border-[#e8e4d0] rounded-lg h-64 overflow-hidden flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={images[activeImage]} alt={product.name} className="w-full h-full object-cover" />
+            </div>
+            {images.length > 1 && (
+              <div className="flex gap-2 mt-3">
+                {images.map((img, i) => (
+                  <button
+                    key={img + i}
+                    type="button"
+                    onClick={() => setActiveImage(i)}
+                    className={`w-14 h-14 rounded border overflow-hidden shrink-0 transition-colors ${i === activeImage ? 'border-[#35291C]' : 'border-[#e8e4d0] opacity-70 hover:opacity-100'}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-[#f5f2e8] border border-[#e8e4d0] rounded-lg h-64 flex items-center justify-center">
+            <span className="text-7xl text-[#c8c4a8]">☕</span>
+          </div>
+        )}
 
         {/* Description */}
         {product.description && (

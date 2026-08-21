@@ -59,6 +59,17 @@ export function ProductEditor({ product, currency }: Props) {
   )
   const [inventory, setInventory] = useState<number | ''>(product?.inventory ?? '')
   const [lowStockAlert, setLowStockAlert] = useState<number | ''>(product?.lowStockAlert ?? '')
+  const [images, setImages] = useState<string[]>(() => {
+    if (!product?.images) return []
+    try {
+      const arr = JSON.parse(product.images)
+      return Array.isArray(arr) ? arr.filter((u): u is string => typeof u === 'string') : []
+    } catch {
+      return []
+    }
+  })
+  const [imageUploading, setImageUploading] = useState(false)
+  const [imageUploadError, setImageUploadError] = useState('')
   const [stripeProductId, setStripeProductId] = useState(product?.stripeProductId ?? '')
   const [visible, setVisible] = useState(product?.visible ?? true)
   const [displayOrder, setDisplayOrder] = useState(product?.displayOrder ?? 0)
@@ -86,6 +97,39 @@ export function ProductEditor({ product, currency }: Props) {
     setVariants((v) => v.filter((_, i) => i !== index))
   }
 
+  async function handleImageUpload(file: File) {
+    setImageUploading(true)
+    setImageUploadError('')
+    try {
+      const presignRes = await fetch('/api/admin/media/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      })
+      const presignData = await presignRes.json()
+      if (!presignRes.ok) throw new Error(presignData.error ?? 'Upload failed')
+      await fetch(presignData.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+      setImages((prev) => [...prev, presignData.publicUrl])
+    } catch (err) {
+      setImageUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setImageUploading(false)
+    }
+  }
+
+  function removeImage(index: number) {
+    setImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function moveImageFirst(index: number) {
+    setImages((prev) => {
+      const next = [...prev]
+      const [img] = next.splice(index, 1)
+      next.unshift(img)
+      return next
+    })
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -101,6 +145,7 @@ export function ProductEditor({ product, currency }: Props) {
         compareAtCents: compareAtCents !== '' ? Number(compareAtCents) : null,
         inventory: inventory !== '' ? Number(inventory) : null,
         lowStockAlert: lowStockAlert !== '' ? Number(lowStockAlert) : null,
+        images: images.length > 0 ? JSON.stringify(images) : null,
         stripeProductId: stripeProductId || null,
         visible,
         displayOrder: Number(displayOrder),
@@ -206,6 +251,37 @@ export function ProductEditor({ product, currency }: Props) {
             placeholder="A vibrant, fruity coffee from the highlands of Ethiopia…"
             minHeight={160}
           />
+        </Field>
+
+        <Field label="Photos" helpText="The first photo is used everywhere this product is shown — the shop grid, the product page, and the Featured Products widget. Add more to give the product page a small gallery.">
+          <div className="flex flex-wrap gap-3">
+            {images.map((img, i) => (
+              <div key={img + i} className="relative w-24 h-24 rounded border border-gray-200 overflow-hidden group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img} alt="" className="w-full h-full object-cover" />
+                {i === 0 && (
+                  <span className="absolute top-1 left-1 bg-[#35291C] text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">Primary</span>
+                )}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  {i !== 0 && (
+                    <button type="button" onClick={() => moveImageFirst(i)} title="Make primary" className="text-white text-xs bg-white/20 hover:bg-white/30 rounded px-1.5 py-1">★</button>
+                  )}
+                  <button type="button" onClick={() => removeImage(i)} title="Remove" className="text-white text-xs bg-white/20 hover:bg-white/30 rounded px-1.5 py-1">✕</button>
+                </div>
+              </div>
+            ))}
+            <label className={`w-24 h-24 flex flex-col items-center justify-center gap-1 rounded border-2 border-dashed text-xs font-semibold transition-colors ${imageUploading ? 'border-gray-200 text-gray-300 cursor-not-allowed' : 'border-gray-300 text-gray-400 hover:border-[#C4AB77] hover:text-[#C4AB77] cursor-pointer'}`}>
+              {imageUploading ? 'Uploading…' : (<><span className="text-xl leading-none">⬆</span>Add photo</>)}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={imageUploading}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = '' }}
+              />
+            </label>
+          </div>
+          {imageUploadError && <p className="text-xs text-red-600 mt-2">{imageUploadError}</p>}
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
